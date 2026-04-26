@@ -1,10 +1,7 @@
 module github.com/dit-protocol/poc
 
-go 1.22
+go 1.25.6
 
-require (
-	github.com/zeebo/blake3 v0.2.3
-	golang.org/x/crypto v0.21.0
-)
+require golang.org/x/crypto v0.50.0
 
-require github.com/klauspost/cpuid/v2 v2.0.12 // indirect
+require golang.org/x/sys v0.43.0 // indirect
