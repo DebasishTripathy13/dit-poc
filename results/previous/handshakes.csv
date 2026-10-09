@@ -1,0 +1,9 @@
+variant,description,client_to_server_bytes,server_to_client_bytes,total_bytes,client_sig_verifications,n,latency_p50_us,latency_p95_us,latency_p99_us,latency_mean_us,client_cpu_us_per_hs,server_cpu_us_per_hs,server_cpu_us_per_hs_min,server_cpu_us_per_hs_max,server_hs_per_s_single_core,server_cpu_utilization,throughput_hs
+a_tls13_classical,"TLS 1.3, ECDSA P-256 chain, X25519 (crypto/tls)",308,1912,2220,3,10000,372.9,650.8,826.7,415.4,348.5,180.4,176.0,182.2,5542,1.000,27721
+b_tls13_hybrid_kem,"TLS 1.3, ECDSA P-256 chain, X25519MLKEM768 (crypto/tls)",1492,3001,4493,3,10000,547.0,972.9,1275.4,636.2,576.5,270.4,265.0,292.7,3696,0.999,18489
+c_tls13_full_pq,"TLS 1.3, ML-DSA-65 chain + 2 ML-DSA SCTs, X25519MLKEM768",1428,22914,24342,5,10000,1197.0,1912.7,3032.6,1290.1,1457.3,739.9,665.2,796.9,1350,0.999,6758
+dit_warm,"DIT, pinned identity, cached epoch credential",1495,6608,8103,1,10000,674.1,1154.1,1596.9,742.9,684.4,537.4,521.5,540.0,1862,1.001,9322
+dit_warm_new_epoch,"DIT, pinned identity, new epoch credential",1495,11927,13422,2,10000,805.7,1396.1,2429.5,893.4,874.0,587.5,582.9,624.0,1700,0.999,8511
+dit_cold,"DIT, first contact, TLV encoding",1495,38694,40189,8,10000,1544.2,2589.9,4593.0,1715.4,2011.8,814.2,800.1,847.9,1229,1.000,6153
+dit_warm_new_epoch_json,"DIT, pinned identity, new epoch credential, JSON encoding",1495,13750,15245,2,10000,809.1,1387.1,2206.7,908.8,883.8,660.8,599.6,683.8,1512,0.999,7567
+dit_cold_json,"DIT, first contact, JSON encoding",1495,49901,51396,8,10000,1926.3,3584.5,6458.6,2187.0,2593.1,984.3,948.2,1081.9,1014,0.998,5080

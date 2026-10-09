@@ -17,6 +17,7 @@ import argparse
 import csv
 import math
 import os
+import re
 
 VARIANTS = [
     # key, label, PQ auth, PQ key exchange, CA-issued certificates
@@ -213,8 +214,27 @@ def main():
     worst = max(spread, key=spread.get)
     m["WindowSpreadMaxPct"] = f"{100 * spread[worst]:.0f}"
     m["WindowSpreadMaxVariant"] = dict((k, lab) for k, lab, *_ in VARIANTS)[worst]
+    # Optional earlier complete run (results/previous/) for run-to-run variation.
+    prev_path = os.path.join(a.results, "previous", "handshakes.csv")
+    if os.path.exists(prev_path):
+        prev = read(prev_path, "variant")
+        diffs = {k: abs(float(hs[k]["server_cpu_us_per_hs"]) - float(prev[k]["server_cpu_us_per_hs"]))
+                 / float(prev[k]["server_cpu_us_per_hs"]) for k in main}
+        order = lambda d: sorted(main, key=lambda k: float(d[k]["server_cpu_us_per_hs"]))
+        m["RunToRunMaxPct"] = f"{100 * max(diffs.values()):.0f}"
+        m["RunToRunOrder"] = "unchanged" if order(hs) == order(prev) else "different"
+    # Tamarin results (formal/tamarin_summary.txt, committed prover output).
+    tam = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "formal", "tamarin_summary.txt")
+    if os.path.exists(tam):
+        t_txt = open(tam).read()
+        mt = re.search(r"processing time: ([0-9.]+)s", t_txt)
+        m["TamarinSeconds"] = f"{float(mt.group(1)):.0f}" if mt else "?"
+        m["TamarinVerified"] = str(len(re.findall(r": verified \(", t_txt)))
+        m["TamarinFalsified"] = str(len(re.findall(r": falsified", t_txt)))
     utils = [float(hs[k]["server_cpu_utilization"]) for k in hs]
     m["UtilMin"], m["UtilMax"] = f"{min(utils):.3f}", f"{max(utils):.3f}"
+    low = min(main, key=lambda k: float(hs[k]["server_cpu_utilization"]))
+    m["UtilMinVariant"] = dict((k, lab) for k, lab, *_ in VARIANTS)[low]
     # Third-party certificate issuance for 1,000 domains with 47-day
     # certificates: at least ceil(365/47) issuances per domain per year.
     m["IssuancePerDomainYear"] = str(math.ceil(365 / 47))

@@ -39,7 +39,7 @@ Requirements: Go 1.25.6, Python ≥ 3.10 with matplotlib (`pip install matplotli
 | Symbolic analysis (Table 5) | `formal/dit.spthy` | `make formal` |
 | Unit and scenario tests | — | `make test` |
 
-`make figures` is deterministic: a fresh clone regenerates the committed `results/generated/` files exactly from the committed CSVs, and CI checks this. `make bench` re-measures. Absolute timings depend on the machine; `results/env.csv` records the machine, Go version, commit and parameters of the committed run.
+`make figures` is deterministic: a fresh clone regenerates the committed tables and number macros (`results/generated/*.tex`) byte for byte from the committed CSVs, and CI checks this. `fig8.pdf` is regenerated from the same CSV; its bytes can differ across matplotlib and font versions (the committed file was made with matplotlib 3.11.2), but its content does not. `results/previous/` holds an earlier complete run on the same machine, used in the paper to report run-to-run variation. `make bench` re-measures. Absolute timings depend on the machine; `results/env.csv` records the machine, Go version, commit and parameters of the committed run.
 
 ### Measurement setup
 

@@ -2,27 +2,27 @@
 \toprule
 Operation & $\mu$s/op & ops/s \\
 \midrule
-ML-DSA-65 key generation & 93.7 & 10{,}675 \\
-ML-DSA-65 sign & 192.2 & 5{,}202 \\
-ML-DSA-65 verify & 69.6 & 14{,}364 \\
-ML-KEM-768 key generation & 42.3 & 23{,}628 \\
-ML-KEM-768 encapsulation & 37.8 & 26{,}441 \\
-ML-KEM-768 decapsulation & 51.1 & 19{,}581 \\
-X25519MLKEM768 client key share & 75.6 & 13{,}229 \\
-X25519MLKEM768 server share + secret & 113.7 & 8{,}793 \\
-X25519MLKEM768 client secret & 80.9 & 12{,}356 \\
-X25519 key generation + ECDH & 59.9 & 16{,}697 \\
-ECDSA P-256 sign & 24.7 & 40{,}554 \\
-ECDSA P-256 verify & 55.1 & 18{,}147 \\
-SHA3-384, 1 KiB & 2.8 & 356{,}566 \\
-SHA-256, 1 KiB & 0.5 & 1{,}859{,}367 \\
-SHA3-384, 64 B & 0.3 & 3{,}082{,}945 \\
-SHA-256, 64 B & 0.1 & 10{,}478{,}117 \\
-Merkle inclusion proof verify (depth 20) & 7.1 & 140{,}384 \\
-EAK issuance (key generation + IK signature) & 293.9 & 3{,}402 \\
-Epoch credential verification & 75.7 & 13{,}205 \\
-FROST 3-of-5 signing (all rounds, all signers) & 554.7 & 1{,}803 \\
-FROST signature verification (Ed25519) & 33.5 & 29{,}861 \\
-Normal rotation validation (publication + pending + rotation) & 317.2 & 3{,}152 \\
+ML-DSA-65 key generation & 85.2 & 11{,}739 \\
+ML-DSA-65 sign & 173.5 & 5{,}765 \\
+ML-DSA-65 verify & 63.4 & 15{,}778 \\
+ML-KEM-768 key generation & 37.4 & 26{,}751 \\
+ML-KEM-768 encapsulation & 34.3 & 29{,}191 \\
+ML-KEM-768 decapsulation & 45.7 & 21{,}863 \\
+X25519MLKEM768 client key share & 64.9 & 15{,}412 \\
+X25519MLKEM768 server share + secret & 100.4 & 9{,}957 \\
+X25519MLKEM768 client secret & 72.8 & 13{,}730 \\
+X25519 key generation + ECDH & 52.1 & 19{,}185 \\
+ECDSA P-256 sign & 22.1 & 45{,}284 \\
+ECDSA P-256 verify & 49.3 & 20{,}297 \\
+SHA3-384, 1 KiB & 2.5 & 405{,}176 \\
+SHA-256, 1 KiB & 0.5 & 2{,}050{,}950 \\
+SHA3-384, 64 B & 0.3 & 3{,}395{,}586 \\
+SHA-256, 64 B & 0.1 & 11{,}581{,}100 \\
+Merkle inclusion proof verify (depth 20) & 6.3 & 159{,}709 \\
+EAK issuance (key generation + IK signature) & 268.6 & 3{,}723 \\
+Epoch credential verification & 68.7 & 14{,}559 \\
+FROST 3-of-5 signing (all rounds, all signers) & 496.9 & 2{,}013 \\
+FROST signature verification (Ed25519) & 30.7 & 32{,}558 \\
+Normal rotation validation (publication + pending + rotation) & 295.5 & 3{,}384 \\
 \bottomrule
 \end{tabular}

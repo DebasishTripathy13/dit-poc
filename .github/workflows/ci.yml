@@ -14,10 +14,10 @@ jobs:
       - run: pip install matplotlib==3.11.2
       - name: Build, vet and test
         run: make test
-      - name: Tables and figure regenerate exactly from the committed CSVs
+      - name: Tables and number macros regenerate exactly from the committed CSVs
         run: |
           make figures
-          git diff --exit-code results/generated/
+          git diff --exit-code -- 'results/generated/*.tex'
       - name: Benchmark smoke run
         run: make quick
       - uses: actions/upload-artifact@v4
