@@ -232,3 +232,38 @@ func TestWitnessRefusesInvalidTransition(t *testing.T) {
 		t.Fatalf("witness cosigned an invalid rotation: %v", err)
 	}
 }
+
+func TestResolvePin(t *testing.T) {
+	_, o, peers := setup(t)
+	pin := o.Identity
+	ik2 := newIK(t)
+	next := Successor(pin, ik2.PublicKey())
+	h := []*Entry{
+		PendingNormalEntry(o.IK, pin, next, t0.Add(time.Hour)),
+		RotationNormalEntry(o.IK, ik2, pin, next, t0.Add(26*time.Hour)),
+	}
+	d, err := ResolvePin(pin, next, h)
+	must(t, err)
+	if d.Previous == nil {
+		t.Fatal("normal rotation should leave the previous identity for the grace period")
+	}
+	// Same presented identity without the rotation entry: rejected.
+	mustFail(t, func() error { _, err := ResolvePin(pin, next, h[:1]); return err }(), ErrPinChain)
+	// A rotation whose waiting period was skipped (e.g. a log that colluded
+	// with the adversary) is rejected by the client's own replay.
+	early := []*Entry{h[0], RotationNormalEntry(o.IK, ik2, pin, next, t0.Add(2*time.Hour))}
+	mustFail(t, func() error { _, err := ResolvePin(pin, next, early); return err }(), ErrPinChain)
+	// Rollback to the pinned predecessor or a same-seq fork: rejected.
+	mustFail(t, func() error { _, err := ResolvePin(next, pin, nil); return err }(), ErrPinRollback)
+	fork := Successor(pin, newIK(t).PublicKey())
+	mustFail(t, func() error { _, err := ResolvePin(next, fork, nil); return err }(), ErrPinRollback)
+	// Recovery path: no grace period.
+	ik3 := newIK(t)
+	n3 := Successor(pin, ik3.PublicKey())
+	rec, _ := RotationRecoveryEntry(peers[:3], pin, n3, t0.Add(60*time.Hour))
+	d, err = ResolvePin(pin, n3, []*Entry{PendingRecoveryEntry(ik3, peers[0], pin, n3, t0.Add(time.Hour)), rec})
+	must(t, err)
+	if d.Previous != nil {
+		t.Fatal("recovery must not leave a grace period")
+	}
+}

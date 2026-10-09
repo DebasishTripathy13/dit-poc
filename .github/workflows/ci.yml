@@ -1,0 +1,26 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build-test-bench:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install matplotlib==3.11.2
+      - name: Build, vet and test
+        run: make test
+      - name: Tables and figure regenerate exactly from the committed CSVs
+        run: |
+          make figures
+          git diff --exit-code results/generated/
+      - name: Benchmark smoke run
+        run: make quick
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-ci
+          path: results-ci/
