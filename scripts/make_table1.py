@@ -131,6 +131,11 @@ def main():
         "x25519mlkem768_server_share": "X25519MLKEM768 server key share",
         "dns_commitment": "DNS commitment (SHA3-384)", "identity_object": "Identity object",
         "epoch_credential": "Epoch credential", "log_entry_key_publication": "Log entry (KEY\\_PUBLICATION)",
+        "log_entry_pending_normal": "Log entry (ROTATION\\_PENDING, normal)",
+        "log_entry_rotation_normal": "Log entry (KEY\\_ROTATION, normal)",
+        "log_entry_pending_recovery": "Log entry (ROTATION\\_PENDING, recovery)",
+        "log_entry_rotation_recovery": "Log entry (KEY\\_ROTATION, recovery)",
+        "log_entry_cancel_recovery": "Log entry (CANCEL, recovery)",
         "inclusion_proof": "Inclusion proof", "cosigned_sth": "Cosigned STH ($q=5$)",
         "dit_bundle_new_epoch": "DIT extension, new epoch", "dit_bundle_cold": "DIT extension, first contact",
     }

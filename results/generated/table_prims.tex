@@ -1,0 +1,28 @@
+\begin{tabular}{lrr}
+\toprule
+Operation & $\mu$s/op & ops/s \\
+\midrule
+ML-DSA-65 key generation & 93.7 & 10{,}675 \\
+ML-DSA-65 sign & 192.2 & 5{,}202 \\
+ML-DSA-65 verify & 69.6 & 14{,}364 \\
+ML-KEM-768 key generation & 42.3 & 23{,}628 \\
+ML-KEM-768 encapsulation & 37.8 & 26{,}441 \\
+ML-KEM-768 decapsulation & 51.1 & 19{,}581 \\
+X25519MLKEM768 client key share & 75.6 & 13{,}229 \\
+X25519MLKEM768 server share + secret & 113.7 & 8{,}793 \\
+X25519MLKEM768 client secret & 80.9 & 12{,}356 \\
+X25519 key generation + ECDH & 59.9 & 16{,}697 \\
+ECDSA P-256 sign & 24.7 & 40{,}554 \\
+ECDSA P-256 verify & 55.1 & 18{,}147 \\
+SHA3-384, 1 KiB & 2.8 & 356{,}566 \\
+SHA-256, 1 KiB & 0.5 & 1{,}859{,}367 \\
+SHA3-384, 64 B & 0.3 & 3{,}082{,}945 \\
+SHA-256, 64 B & 0.1 & 10{,}478{,}117 \\
+Merkle inclusion proof verify (depth 20) & 7.1 & 140{,}384 \\
+EAK issuance (key generation + IK signature) & 293.9 & 3{,}402 \\
+Epoch credential verification & 75.7 & 13{,}205 \\
+FROST 3-of-5 signing (all rounds, all signers) & 554.7 & 1{,}803 \\
+FROST signature verification (Ed25519) & 33.5 & 29{,}861 \\
+Normal rotation validation (publication + pending + rotation) & 317.2 & 3{,}152 \\
+\bottomrule
+\end{tabular}

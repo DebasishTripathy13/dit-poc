@@ -4,7 +4,8 @@
     python3 scripts/make_fig8.py --results results --out results/generated
 
 Writes fig8.pdf and fig8.png: (left) bytes on the wire per handshake split
-by direction; (right) server CPU time per handshake on one core.
+by direction; (right) server CPU time per handshake on one core (median of
+the throughput windows; whiskers show minimum and maximum).
 Requires matplotlib.
 """
 import argparse
@@ -39,6 +40,8 @@ def main():
     up = [int(hs[k]["client_to_server_bytes"]) / 1000 for k, _ in VARIANTS]
     down = [int(hs[k]["server_to_client_bytes"]) / 1000 for k, _ in VARIANTS]
     cpu = [float(hs[k]["server_cpu_us_per_hs"]) for k, _ in VARIANTS]
+    lo = [c - float(hs[k]["server_cpu_us_per_hs_min"]) for c, (k, _) in zip(cpu, VARIANTS)]
+    hi = [float(hs[k]["server_cpu_us_per_hs_max"]) - c for c, (k, _) in zip(cpu, VARIANTS)]
 
     plt.rcParams.update({"font.size": 8, "font.family": "serif"})
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.6))
@@ -51,12 +54,12 @@ def main():
     ax1.invert_yaxis()
     ax1.set_xlabel("Handshake bytes (kB)")
     ax1.set_xlim(0, max(u + d for u, d in zip(up, down)) * 1.15)
-    ax1.legend(frameon=False, loc="lower right")
+    ax1.legend(frameon=False, loc="upper right")
     ax1.spines[["top", "right"]].set_visible(False)
 
-    ax2.barh(y, cpu, color=CPU)
+    ax2.barh(y, cpu, color=CPU, xerr=[lo, hi], error_kw={"elinewidth": 0.8, "capsize": 2})
     for i, c in enumerate(cpu):
-        ax2.text(c + 8, i, f"{c:.0f}", va="center")
+        ax2.text(c + hi[i] + 10, i, f"{c:.0f}", va="center")
     ax2.set_yticks(list(y), [""] * len(labels))
     ax2.invert_yaxis()
     ax2.set_xlabel("Server CPU per handshake ($\\mu$s, one core)")

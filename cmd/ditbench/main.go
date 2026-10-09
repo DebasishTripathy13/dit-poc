@@ -57,6 +57,7 @@ var (
 	flagLogSize   = flag.Int("log-size", 1<<20, "number of entries in the simulated DIT log")
 	flagBenchTime = flag.Duration("benchtime", time.Second, "target time per primitive microbenchmark")
 	flagServe     = flag.Bool("serve", false, "internal: run as the pinned server process")
+	flagOnly      = flag.String("only", "", "run only one stage: primitives, sizes or handshakes")
 )
 
 func main() {
@@ -80,13 +81,22 @@ func main() {
 		fmt.Fprintln(os.Stderr, "warning: taskset not found; CPU pinning disabled")
 	}
 	check(os.MkdirAll(*flagOut, 0o755))
-	writeEnv()
-	fmt.Fprintln(os.Stderr, "== primitives")
-	runPrimitives(filepath.Join(*flagOut, "primitives.csv"))
-	fmt.Fprintln(os.Stderr, "== sizes")
-	runSizes(filepath.Join(*flagOut, "sizes.csv"))
-	fmt.Fprintln(os.Stderr, "== handshakes")
-	runHandshakes()
+	stage := func(name string) bool { return *flagOnly == "" || *flagOnly == name }
+	if *flagOnly == "" {
+		writeEnv()
+	}
+	if stage("primitives") {
+		fmt.Fprintln(os.Stderr, "== primitives")
+		runPrimitives(filepath.Join(*flagOut, "primitives.csv"))
+	}
+	if stage("sizes") {
+		fmt.Fprintln(os.Stderr, "== sizes")
+		runSizes(filepath.Join(*flagOut, "sizes.csv"))
+	}
+	if stage("handshakes") {
+		fmt.Fprintln(os.Stderr, "== handshakes")
+		runHandshakes()
+	}
 }
 
 func check(err error) {

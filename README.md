@@ -1,120 +1,61 @@
-# DIT Protocol (v2.2) - Proof of Concept
+# DIT proof of concept
 
-> **Decentralized Identity and Trust (DIT)** is a next-generation, post-quantum secure cryptographic protocol designed to replace the centralized X.509 Certificate Authority (CA) hierarchy with a decentralized, DNSSEC-anchored identity framework.
+Reference implementation and measurement harness for the paper *DIT: DNSSEC-Anchored Domain Identities with a Verifiable Key-Event Log for Post-Quantum Web Authentication* (Tripathy and P, revised version).
 
-This repository contains the high-performance Go 1.25 Proof-of-Concept (PoC) for the **DIT Protocol v2.2**, as detailed in the accompanying academic paper. The PoC validates the protocol's formal security reductions, zero-overhead annual renewals, and sub-millisecond cryptographic handshake performance.
+Release `v1.0-paper` is archived on Zenodo: **DOI: 10.5281/zenodo.XXXXXXX** *(to be filled in when the release is archived)*.
 
-<p align="center">
-  <img src="assets/dit_architecture.png" width="800" alt="DIT Architecture">
-</p>
+## What is implemented
 
----
+| Package | Content |
+|---|---|
+| `pqc/` | ML-DSA-65 (FIPS 204, Cloudflare CIRCL), ML-KEM-768 (FIPS 203, Go `crypto/mlkem`), X25519MLKEM768 (RFC 10024), SHA3-384 (Go `crypto/sha3`). Nothing is simulated. |
+| `identity/` | Identity object, its 48-byte SHA3-384 DNS commitment, IK → EAK epoch credentials; canonical TLV encoding plus a JSON encoding for size comparison. |
+| `tlog/` | RFC 9162 Merkle tree over SHA3-384 (inclusion and consistency proofs), signed tree heads, witnesses that check consistency and entry validity before cosigning, q-of-m client verification. |
+| `rotation/` | Key-event log entries and the deterministic state machine run by witnesses and clients: normal rotation (waiting period, σ_old/σ_new, recovery configuration immutable), recovery rotation (peer-sponsored requests, waiting period, k-of-n signed cancels, FROST σ_rot), precedence of recovery over normal rotation, EAK revocation, pin-conflict resolution. |
+| `frost/` | FROST(Ed25519, SHA-512) per RFC 9591, trusted-dealer key generation. Aggregate signatures verify with `crypto/ed25519`. |
+| `handshake/` | DIT over TLS 1.3 (paper, design Option A): X25519MLKEM768 key share, TLS 1.3 key schedule (SHA-384), EAK as RFC 7250 raw public key, ML-DSA-65 CertificateVerify, DIT extension inside the encrypted Certificate message. Also baseline (c): a fully post-quantum X.509 chain on the same implementation. |
+| `baseline/` | Baselines (a) and (b) on Go `crypto/tls`: ECDSA P-256 chain with X25519 or X25519MLKEM768. |
+| `sim/` | In-memory deployment (log, 7 witnesses, a published domain) used by tests and benchmarks; end-to-end handshake tests. |
+| `cmd/ditbench/` | Produces every number in the paper (see below). |
+| `bench/` | `go test` benchmarks for quick regression checks. |
+| `formal/` | Tamarin model of the handshake and both rotation paths; `tamarin_summary.txt` is the prover output. |
 
-## 🌟 Key Innovations
+**Not implemented / limitations:** the handshake follows RFC 8446 encodings but omits HelloRetryRequest, resumption, client authentication, alerts and middlebox-compatibility mode, and it does not interoperate with unmodified TLS stacks. DNSSEC validation is not performed; the client receives the DNS commitment as an input. The log, witnesses and recovery peers run in one process. Secure erasure of keys is best effort, since Go gives no zeroisation guarantee. FROST uses a trusted dealer, not DKG. The "monitor" mode of the coexistence policy (paper, Section 4.7) is specified but not implemented.
 
-- **Three-Level Key Hierarchy**: 
-  - **Identity Key (IK)**: Long-term post-quantum root of trust (`ML-DSA-65`), anchored in DNSSEC.
-  - **Epoch Authentication Key (EAK)**: Fresh, randomized 24-hour keys generated daily to sign handshakes, eliminating the need for complex revocation mechanisms like OCSP or CRLs.
-  - **Session Key (SK)**: Forward-secure ephemeral keys established per connection.
-- **Post-Quantum Hybrid Key Exchange**: Implements a highly secure `ML-KEM-768` + `X25519` hybrid key exchange, modeled after the TLS 1.3 handshake (RFC 8446) and IETF drafts.
-- **Decentralized Transparency Log**: A robust, append-only `SHA3-384` Merkle tree requiring a rigorous 5-of-7 Trust Witness threshold cosignature to prevent equivocation.
-- **FROST Key Ceremony**: Distributed threshold key generation (DKG) and signing (RFC 9591) for secure, quorum-based Identity Key recovery without a single point of failure.
+## Reproducing the paper
 
-<details>
-<summary><b>View Protocol Diagrams</b></summary>
-<br>
+Requirements: Go 1.25.6, Python ≥ 3.10 with matplotlib (`pip install matplotlib`), Linux with `taskset` (util-linux) for CPU pinning. For the formal model: tamarin-prover 1.12 and Maude 3.5.
 
-**1. Trust Model Comparison**
-<img src="assets/ca_vs_dit.png" width="800" alt="CA vs DIT">
+| Paper item | Source data | Command |
+|---|---|---|
+| Table 1 (bytes, signature checks, properties) | `results/handshakes.csv` | `make figures` → `results/generated/table1.tex` |
+| Table 2 (latency, client/server CPU, single-core handshakes/s) | `results/handshakes.csv` | `make figures` → `results/generated/table_cpu.tex` |
+| Figure 8 | `results/handshakes.csv` | `make figures` → `results/generated/fig8.pdf` |
+| Table B1 (object sizes, TLV vs JSON) | `results/sizes.csv` | `make figures` → `results/generated/table_sizes.tex` |
+| Table C1 (primitive microbenchmarks) | `results/primitives.csv` | `make figures` → `results/generated/table_prims.tex` |
+| Every number quoted in the text | all of the above | `make figures` → `results/generated/numbers.tex` |
+| Re-measure everything (≈ 15 min) | — | `make bench && make figures` |
+| Symbolic analysis (Table 5) | `formal/dit.spthy` | `make formal` |
+| Unit and scenario tests | — | `make test` |
 
-**2. Transparency Log Merkle Tree**
-<img src="assets/merkle_tree.png" width="800" alt="Merkle Tree">
+`make figures` is deterministic: a fresh clone regenerates the committed `results/generated/` files exactly from the committed CSVs, and CI checks this. `make bench` re-measures. Absolute timings depend on the machine; `results/env.csv` records the machine, Go version, commit and parameters of the committed run.
 
-**3. Key Rotation Flowchart**
-<img src="assets/frost_ceremony.png" width="800" alt="FROST Ceremony">
-</details>
+### Measurement setup
 
----
+The server runs as a separate process pinned to one logical CPU (`-server-cpu`, default 4) with `GOMAXPROCS=1`. The load generator runs on the remaining CPUs (`-client-cpus`). Traffic goes over TCP on the loopback interface. **No network latency or packet loss is emulated**, so latencies are computation plus loopback cost. Extra round trips caused by large server flights are computed separately from the measured byte counts (initial congestion window of 10 segments, paper Appendix B). Each variant gets one handshake to count bytes, 1,000 warm-up handshakes, 10,000 measured sequential handshakes (latency percentiles and client CPU), and three 5-second windows with 12 concurrent clients that saturate the single-core server (server CPU per handshake from `/proc/<pid>/stat`; median reported, minimum and maximum kept in the CSV).
 
-## 🏗️ Architecture & Module Structure
+## Tests
 
-The PoC spans approximately 1,500 lines of highly modular Go code, mapping directly to the six architectural layers of the DIT specification:
-
-* `crypto/` — Core cryptographic primitive wrappers and KDF implementations.
-* `identity/` — Implementation of Layer 2 (IK generation) and Layer 3 (fresh EAK daily rotation and $\sigma_{IK}$ certification).
-* `transparency/` — Implementation of Layer 4. Contains the `SHA3-384` Merkle tree, append-only log, and the 5-of-7 witness cosigning logic.
-* `protocol/` — Implementation of Layer 5. Contains the TLS 1.3-shaped `ClientHello`/`ServerHello` handshake, hybrid KEM logic, and canonical transcript binding.
-* `rotation/` — Implementation of Layer 6. Contains the state machine for normal dual-signature IK rotation and the `FROST` threshold key recovery ceremony.
-* `bench/` — Benchmarking suite utilizing `tc netem` to validate network latency, CPU cryptographic overhead, and bandwidth constraints.
-
----
-
-## 🔒 Cryptographic Primitives
-
-This PoC enforces strict adherence to modern cryptographic standards:
-
-| Primitive | Algorithm | Specification | Purpose |
-| :--- | :--- | :--- | :--- |
-| **KEM** | ML-KEM-768 | NIST FIPS 203 | Primary post-quantum key exchange (via Go 1.25 `crypto/mlkem`) |
-| **ECDHE** | X25519 | RFC 7748 | Classical hybrid key exchange component |
-| **Signature** | ML-DSA-65 | NIST FIPS 204 | Post-quantum Identity & Epoch signatures |
-| **KDF** | HKDF-SHA3-384 | RFC 5869 | Key schedule derivation |
-| **AEAD** | AES-256-GCM | NIST SP 800-38D | Application data encryption |
-| **Threshold** | FROST | RFC 9591 | Distributed IK recovery signing |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-* **Go 1.25** or higher is strictly required for native `crypto/mlkem` support.
-
-### Running the End-to-End Demonstration
-The `main.go` file contains a complete, automated demonstration of the DIT protocol lifecycle. It executes the following 8 phases sequentially:
-
-1. **Initialization**: Starts the simulated Transparency Log and Trust Witnesses.
-2. **Identity Generation**: Creates the `ML-DSA-65` IK and registers it via a log inclusion proof.
-3. **Epoch Rotation**: Generates a fresh 24-hour EAK and certifies it under the IK.
-4. **Warm Handshake**: Simulates a sub-millisecond hybrid KEX with cached identity state.
-5. **Cold Handshake**: Simulates a first-contact connection requiring full chain validation.
-6. **Normal IK Rotation**: Executes a standard, PQ-secure IK rotation authorized by a dual-signature.
-7. **FROST Ceremony**: Simulates a lost IK and recovers it using a distributed threshold quorum.
-8. **Epoch Cleanup**: Safely destroys the EAK private key material.
-
-```bash
-# Clone the repository
-git clone https://github.com/dit-protocol/poc.git
-cd poc
-
-# Run the lifecycle demonstration
-go run main.go
+```
+make test
 ```
 
-### Running the Benchmark Suite
-The paper claims an average cryptographic handshake overhead of `~744µs`. You can validate these metrics locally:
+These cover: FROST signatures verify as Ed25519 for every t-subset and fail below threshold; Merkle inclusion and consistency proofs for all tree sizes up to 70; witness refusal of equivocating or invalid heads, and q-of-m quorum checks; every rotation rule, including the stolen-IK race (recovery supersedes a pending normal rotation), late detection (recovery still possible after the attacker's normal rotation), cancel quorum, bounded recovery-request spam, replay and rollback; pin resolution; and handshakes on the warm, new-epoch and cold paths in both encodings, with rejection of a wrong DNS commitment, a stale STH, q−1 cosignatures, a bad inclusion proof, foreign credentials, an EAK mismatch, tampered bytes and expired grace periods.
 
-```bash
-go test -bench . -benchmem ./bench/...
-```
+## History
 
-<p align="center">
-  <img src="assets/performance_chart.png" width="700" alt="Performance Benchmarks">
-</p>
+The version submitted with the first manuscript (commit `82e8e8e`) did not match the paper. It used Ed25519 in place of ML-DSA-65 and X25519 in place of ML-KEM-768, `bench/bench_test.go` did not compile, and the reported numbers were not produced by the code. That version is superseded by this one. See the response to reviewers, comments R1.6 and R3.2.
 
----
+## License
 
-## ⚠️ Academic & Security Notice
-
-**This software is an academic Proof-of-Concept and MUST NOT be used in production environments.**
-
-While the architecture rigorously maps to the formal security proofs established in the DIT paper (Theorems 1 through 6), certain operational shortcuts have been taken for the sake of PoC portability:
-1. Pending full CGO integration for Cloudflare CIRCL's lattice signatures across all platforms, `Ed25519` is occasionally utilized as a lightweight stand-in for `ML-DSA-65` in non-critical benchmarking paths.
-2. DNSSEC validation is simulated locally rather than performing live recursive DNS queries.
-3. The FROST recovery path currently operates over classical curves rather than lattice-based threshold schemes (e.g., Threshold Raccoon), mirroring the explicit PQ-security gap documented in Theorem 6 of the specification.
-
-<p align="center">
-  <img src="assets/threat_model.png" width="800" alt="Threat Model">
-</p>
-
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+See `LICENSE`.

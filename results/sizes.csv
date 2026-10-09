@@ -1,0 +1,20 @@
+object,bytes_tlv,bytes_json,note
+mldsa65_public_key,1952,0,FIPS 204
+mldsa65_signature,3309,0,FIPS 204
+mldsa65_spki_der,1974,0,RFC 9881 SubjectPublicKeyInfo
+x25519mlkem768_client_share,1216,0,1184 + 32 (RFC 10024)
+x25519mlkem768_server_share,1120,0,1088 + 32 (RFC 10024)
+dns_commitment,48,0,SHA3-384 of identity object
+identity_object,2391,3320,5 recovery peers
+epoch_credential,5315,7126,
+log_entry_key_publication,5759,0,includes identity object and IK signature
+log_entry_pending_normal,3416,0,sigma_old
+log_entry_rotation_normal,9116,0,new identity + sigma_old + sigma_new
+log_entry_pending_recovery,11068,0,new identity + IK_new and sponsor signatures
+log_entry_rotation_recovery,2562,0,new identity + FROST signature
+log_entry_cancel_recovery,5368,0,peer key + peer signature
+inclusion_proof,960,0,"depth 20, 48 B per level"
+cosigned_sth,19984,0,log signature + q=5 cosignatures
+dit_bundle_new_epoch,5319,7142,credential only
+dit_bundle_cold,32042,43249,credential + entry + proof + cosigned STH
+log_size,1048576,0,entries in simulated log
