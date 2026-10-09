@@ -32,6 +32,7 @@ Requirements: Go 1.25.6, Python ≥ 3.10 with matplotlib (`pip install matplotli
 | Table 2 (latency, client/server CPU, single-core handshakes/s) | `results/handshakes.csv` | `make figures` → `results/generated/table_cpu.tex` |
 | Figure 8 | `results/handshakes.csv` | `make figures` → `results/generated/fig8.pdf` |
 | Table B1 (object sizes, TLV vs JSON) | `results/sizes.csv` | `make figures` → `results/generated/table_sizes.tex` |
+| Baseline (c) certificate sizes (Appendix B) | `results/certificates.csv` | `make figures` → macros in `numbers.tex` |
 | Table C1 (primitive microbenchmarks) | `results/primitives.csv` | `make figures` → `results/generated/table_prims.tex` |
 | Every number quoted in the text | all of the above | `make figures` → `results/generated/numbers.tex` |
 | Re-measure everything (≈ 15 min) | — | `make bench && make figures` |

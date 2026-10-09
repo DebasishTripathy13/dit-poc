@@ -267,3 +267,27 @@ func TestResolvePin(t *testing.T) {
 		t.Fatal("recovery must not leave a grace period")
 	}
 }
+
+// A log that backdates a pending entry (to make the waiting period appear to
+// have elapsed) is caught by the witnesses' clock-window check.
+func TestWitnessRejectsBackdatedEntry(t *testing.T) {
+	o, _, pub, err := NewDomain(dom, 3, 5, []byte("contact"))
+	must(t, err)
+	pub.Timestamp = at(t0)
+	v := &Validator{State: NewState(), Skew: 5 * time.Minute}
+	must(t, v.Validate([][]byte{pub.Marshal()}, t0))
+	ik2 := newIK(t)
+	next := Successor(o.Identity, ik2.PublicKey())
+	now := t0.Add(30 * 24 * time.Hour)
+	backdated := PendingNormalEntry(o.IK, o.Identity, next, t0.Add(time.Minute))
+	if err := v.Validate([][]byte{backdated.Marshal()}, now); err == nil {
+		t.Fatal("backdated pending entry accepted")
+	}
+	honest := PendingNormalEntry(o.IK, o.Identity, next, now)
+	must(t, v.Validate([][]byte{honest.Marshal()}, now))
+	early := RotationNormalEntry(o.IK, ik2, o.Identity, next, now.Add(time.Hour))
+	if err := v.Validate([][]byte{early.Marshal()}, now.Add(time.Hour)); err == nil {
+		t.Fatal("rotation before the waiting period accepted")
+	}
+	must(t, v.Validate([][]byte{RotationNormalEntry(o.IK, ik2, o.Identity, next, now.Add(25*time.Hour)).Marshal()}, now.Add(25*time.Hour)))
+}

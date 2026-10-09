@@ -11,6 +11,7 @@
 //	                     verifications, latency percentiles, client CPU, server
 //	                     CPU per handshake and single-core handshakes/s
 //	latency_samples.csv  every individual handshake latency
+//	certificates.csv     certificate sizes of baselines (a)-(c)
 //
 // The server runs in a child process pinned to one logical CPU with
 // GOMAXPROCS=1; clients run in this process on the remaining CPUs. All
@@ -115,6 +116,14 @@ func writeCSV(path string, header []string, rows [][]string) {
 	check(w.WriteAll(rows))
 }
 
+func totalCPUs() int {
+	b, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return runtime.NumCPU()
+	}
+	return strings.Count(string(b), "\nprocessor") + 1
+}
+
 func writeEnv() {
 	cpu := "unknown"
 	if b, err := os.ReadFile("/proc/cpuinfo"); err == nil {
@@ -140,7 +149,8 @@ func writeEnv() {
 		{"os_arch", runtime.GOOS + "/" + runtime.GOARCH},
 		{"kernel", kernel},
 		{"cpu_model", cpu},
-		{"logical_cpus", strconv.Itoa(runtime.NumCPU())},
+		{"logical_cpus_total", strconv.Itoa(totalCPUs())},
+		{"logical_cpus_load_generator", strconv.Itoa(runtime.NumCPU())},
 		{"server_cpu", strconv.Itoa(*flagServerCPU)},
 		{"client_cpus", *flagClientCPU},
 		{"transport", "TCP over loopback (127.0.0.1), no netem"},
@@ -271,6 +281,14 @@ func us(d time.Duration) string { return strconv.FormatFloat(float64(d)/1e3, 'f'
 func runHandshakes() {
 	cmd, t, stop := startServer()
 	defer stop()
+	writeCSV(filepath.Join(*flagOut, "certificates.csv"), []string{"item", "bytes"}, [][]string{
+		{"ecdsa_leaf_der", strconv.Itoa(t.ECLeafBytes)},
+		{"ecdsa_intermediate_der", strconv.Itoa(t.ECInterBytes)},
+		{"pq_cert_meta", strconv.Itoa(t.PQMetaBytes)},
+		{"pq_leaf_with_2_scts", strconv.Itoa(t.PQLeafBytes)},
+		{"pq_intermediate", strconv.Itoa(t.PQInterBytes)},
+		{"pq_sct", strconv.Itoa(handshake.SCTSize)},
+	})
 	header := []string{"variant", "description", "client_to_server_bytes", "server_to_client_bytes", "total_bytes",
 		"client_sig_verifications", "n", "latency_p50_us", "latency_p95_us", "latency_p99_us", "latency_mean_us",
 		"client_cpu_us_per_hs", "server_cpu_us_per_hs", "server_cpu_us_per_hs_min", "server_cpu_us_per_hs_max",

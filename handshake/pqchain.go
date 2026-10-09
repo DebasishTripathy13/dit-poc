@@ -73,6 +73,10 @@ func NewPQChain(metaBytes int) (*PQChain, error) {
 	return c, nil
 }
 
+// LeafBytes and IntermediateBytes return the certificate sizes.
+func (c *PQChain) LeafBytes() int         { return len(c.leafCert) }
+func (c *PQChain) IntermediateBytes() int { return len(c.interCt) }
+
 // Certificate implements ServerAuth: an X.509 certificate_list of two entries.
 func (c *PQChain) Certificate([]byte) (byte, []byte, error) {
 	list := &builder{}

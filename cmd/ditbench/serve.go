@@ -18,18 +18,22 @@ import (
 // ports and the public trust material a client needs (CA roots, the DIT DNS
 // commitment, witness keys, and the pinned identity / cached credential).
 type trust struct {
-	Ports       map[string]int `json:"ports"`
-	ECDSARoot   []byte         `json:"ecdsa_root"`
-	PQRoot      []byte         `json:"pq_root"`
-	PQLogs      [][]byte       `json:"pq_logs"`
-	PQMetaBytes int            `json:"pq_meta_bytes"`
-	Commitment  []byte         `json:"dit_commitment"`
-	LogPub      []byte         `json:"dit_log_pub"`
-	Witnesses   map[int][]byte `json:"dit_witnesses"`
-	Identity    []byte         `json:"dit_identity"`
-	Credential  []byte         `json:"dit_credential"`
-	LogSize     uint64         `json:"dit_log_size"`
-	Now         int64          `json:"now"`
+	Ports        map[string]int `json:"ports"`
+	ECDSARoot    []byte         `json:"ecdsa_root"`
+	PQRoot       []byte         `json:"pq_root"`
+	PQLogs       [][]byte       `json:"pq_logs"`
+	PQMetaBytes  int            `json:"pq_meta_bytes"`
+	PQLeafBytes  int            `json:"pq_leaf_bytes"`
+	PQInterBytes int            `json:"pq_inter_bytes"`
+	ECLeafBytes  int            `json:"ecdsa_leaf_bytes"`
+	ECInterBytes int            `json:"ecdsa_inter_bytes"`
+	Commitment   []byte         `json:"dit_commitment"`
+	LogPub       []byte         `json:"dit_log_pub"`
+	Witnesses    map[int][]byte `json:"dit_witnesses"`
+	Identity     []byte         `json:"dit_identity"`
+	Credential   []byte         `json:"dit_credential"`
+	LogSize      uint64         `json:"dit_log_size"`
+	Now          int64          `json:"now"`
 }
 
 // fixedNow is the evaluation time used by every component, so that runs are
@@ -65,7 +69,8 @@ func serve(logSize int) error {
 		"dit-json": func(c net.Conn) error { _, err := handshake.Server(c, &jsonServer); return err },
 	}
 	t := trust{Ports: map[string]int{}, ECDSARoot: chain.Root.Raw, PQRoot: pq.Root.PublicKey(),
-		PQMetaBytes: meta, Commitment: world.Commitment, LogPub: world.Policy.LogPub,
+		PQMetaBytes: meta, PQLeafBytes: pq.LeafBytes(), PQInterBytes: pq.IntermediateBytes(),
+		ECLeafBytes: len(chain.Leaf.Raw), ECInterBytes: len(chain.Intermediate.Raw), Commitment: world.Commitment, LogPub: world.Policy.LogPub,
 		Witnesses: map[int][]byte{}, Identity: world.Owner.Identity.MarshalTLV(),
 		Credential: world.Server.Credential.MarshalTLV(), LogSize: world.Log.Tree.Size(), Now: fixedNow.Unix()}
 	for _, l := range pq.CTLogs {

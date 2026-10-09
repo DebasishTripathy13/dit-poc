@@ -309,8 +309,11 @@ func (v *Validator) Validate(entries [][]byte, now time.Time) error {
 		if err != nil {
 			return fmt.Errorf("entry %d: %w", i, err)
 		}
-		if e.Timestamp > uint64(now.Add(v.Skew).Unix()) {
-			return fmt.Errorf("entry %d: timestamp in the future", i)
+		// The log assigns timestamps; a witness accepts only timestamps within
+		// Skew of its own clock. Without the lower bound a malicious log could
+		// backdate a pending entry and so shorten the waiting periods.
+		if e.Timestamp > uint64(now.Add(v.Skew).Unix()) || e.Timestamp < uint64(now.Add(-v.Skew).Unix()) {
+			return fmt.Errorf("entry %d: timestamp outside the witness's clock window", i)
 		}
 		if err := c.Apply(e); err != nil {
 			return fmt.Errorf("entry %d (%s): %w", i, e.Type, err)
