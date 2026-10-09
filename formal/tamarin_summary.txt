@@ -1,0 +1,19 @@
+# tamarin-prover 1.12.0, maude 3.5.1, 2026-10-09, command: tamarin-prover --prove formal/dit.spthy
+summary of summaries:
+
+analyzed: formal/dit.spthy
+
+  processing time: 154.74s
+  
+  executable_handshake (exists-trace): verified (9 steps)
+  executable_normal_rotation (exists-trace): verified (8 steps)
+  executable_recovery (exists-trace): verified (6 steps)
+  server_authentication (all-traces): verified (502 steps)
+  server_authentication_injective (all-traces): verified (730 steps)
+  session_key_secrecy_forward (all-traces): verified (616 steps)
+  normal_rotation_authorised (all-traces): verified (14 steps)
+  recovery_unforgeable (all-traces): verified (8 steps)
+  recovery_authorised (all-traces): verified (62 steps)
+  recovery_one_corrupt_peer_insufficient (all-traces): verified (113 steps)
+
+==============================================================================

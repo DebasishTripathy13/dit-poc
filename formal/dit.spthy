@@ -1,0 +1,236 @@
+theory DIT
+begin
+
+/*
+ * Symbolic model of DIT (revised design, Option A) for the Tamarin prover.
+ *
+ *   tamarin-prover --prove formal/dit.spthy
+ *
+ * Scope.
+ *   - Handshake: TLS 1.3 shape with the EAK as raw public key. The ML-KEM-768
+ *     component of X25519MLKEM768 is modelled as an IND-CCA KEM; the X25519
+ *     component is omitted, i.e. given to the adversary, which models the
+ *     quantum adversary A8 against the key exchange. Signatures (ML-DSA-65)
+ *     are perfect (EUF-CMA) signatures.
+ *   - DNSSEC (T1) is a trusted channel from the domain owner to clients
+ *     (!DNS facts); the q-of-m witnessed log (T8-T10) is a trusted
+ *     append-only store of accepted transitions (!Accepted facts) that only
+ *     the log/witness rules create.
+ *   - Normal rotation: authorised by sigma_old under the current IK and
+ *     sigma_new under the new IK.
+ *   - Recovery rotation: a 2-of-3 threshold signature under the recovery
+ *     group key. The group key is never revealed; a signature is produced
+ *     only when two distinct peers approve. An honest peer approves only
+ *     after out-of-band confirmation with the owner (T12); a corrupted peer
+ *     approves anything.
+ *
+ * Not modelled: waiting periods, precedence between pending rotations,
+ * cancels and grace periods (these are timing/state rules; they are checked
+ * by the executable state machine in package rotation and its tests), the
+ * TLS record layer, and computational properties of the hybrid combiner.
+ */
+
+builtins: signing, hashing, symmetric-encryption
+
+functions: kempk/1, kemenc/2, kemdec/2
+equations: kemdec(kemenc(m, kempk(sk)), sk) = m
+
+/* ---------------- Domain setup and DNSSEC ---------------- */
+
+rule Register_Domain:
+    [ Fr(~ik) ]
+  --[ Registered($D, pk(~ik)), HonestIK($D, pk(~ik)), OnlyOnce($D) ]->
+    [ !IK($D, ~ik), CurrentIK($D, ~ik),
+      !DNS($D, pk(~ik)),                 // DNSSEC-validated commitment (T1)
+      !Accepted($D, pk(~ik)),            // logged and witness-accepted
+      Out(pk(~ik)) ]
+
+rule Setup_Recovery:
+    [ Fr(~grp), !IK($D, ik) ]
+  --[ RecoverySetup($D), OnlyOnceRec($D) ]->
+    [ !RecoveryKey($D, ~grp), !Peer($D, '1'), !Peer($D, '2'), !Peer($D, '3'),
+      Out(pk(~grp)) ]
+
+/* ---------------- Epoch credentials ---------------- */
+
+rule Issue_EAK:
+    [ !IK($D, ik), Fr(~eak), Fr(~epoch) ]
+  --[ IssuedEAK($D, pk(~eak)) ]->
+    [ !EAK($D, ~eak, ~epoch, sign(<'cred', $D, pk(~eak), ~epoch>, ik)),
+      Out(<pk(~eak), ~epoch, sign(<'cred', $D, pk(~eak), ~epoch>, ik)>) ]
+
+/* ---------------- Handshake ---------------- */
+
+// Client: pins the identity learned from DNSSEC and the witnessed log.
+rule Client_Hello:
+    [ Fr(~x), Fr(~nc), !DNS($D, ikpub), !Accepted($D, ikpub) ]
+  -->
+    [ ClientWait($C, $D, ikpub, ~x, ~nc), Out(<'CH', $D, ~nc, kempk(~x)>) ]
+
+rule Server_Flight:
+    let ch   = <'CH', $D, nc, kpk>
+        ct   = kemenc(~ss, kpk)
+        tr   = <ch, ct, ~ns>
+        k    = h(<'hs', ~ss, tr>)
+        cv   = sign(<'cv', h(tr), pk(eak)>, eak)
+        fin  = h(<'sfin', k, tr>)
+    in
+    [ In(ch), Fr(~ss), Fr(~ns), !EAK($D, eak, epoch, credsig) ]
+  --[ Running($D, tr, k) ]->
+    [ Out(<ct, ~ns, senc(<pk(eak), epoch, credsig, cv, fin>, k)>) ]
+
+rule Client_Finish:
+    let ch   = <'CH', $D, ~nc, kempk(~x)>
+        ss   = kemdec(ct, ~x)
+        tr   = <ch, ct, ns>
+        k    = h(<'hs', ss, tr>)
+    in
+    [ ClientWait($C, $D, ikpub, ~x, ~nc),
+      In(<ct, ns, senc(<eakpub, epoch, credsig, cv, fin>, k)>) ]
+  --[ Eq(verify(credsig, <'cred', $D, eakpub, epoch>, ikpub), true),
+      Eq(verify(cv, <'cv', h(tr), eakpub>, eakpub), true),
+      Eq(fin, h(<'sfin', k, tr>)),
+      Commit($C, $D, tr, k), Secret($D, k), EraseKEM(~x) ]->
+    [ ]
+
+/* ---------------- Compromise ---------------- */
+
+rule Reveal_IK:
+    [ !IK($D, ik) ] --[ RevIK($D), RevIKKey($D, pk(ik)) ]-> [ Out(ik) ]
+
+rule Reveal_EAK:
+    [ !EAK($D, eak, epoch, credsig) ] --[ RevEAK($D) ]-> [ Out(eak) ]
+
+rule Corrupt_Peer:
+    [ !Peer($D, i) ] --[ CorruptPeer($D, i) ]-> [ !Corrupted($D, i) ]
+
+/* ---------------- Normal rotation ---------------- */
+
+rule Owner_Normal_Rotation:
+    [ CurrentIK($D, ik), Fr(~ik2) ]
+  --[ OwnerRotates($D, pk(ik), pk(~ik2)), HonestIK($D, pk(~ik2)) ]->
+    [ CurrentIK($D, ~ik2), !IK($D, ~ik2),
+      Out(<'rot', $D, pk(ik), pk(~ik2),
+           sign(<'rotold', $D, pk(ik), pk(~ik2)>, ik),
+           sign(<'rotnew', $D, pk(ik), pk(~ik2)>, ~ik2)>) ]
+
+// The witnessed log accepts a rotation away from an accepted key if both
+// signatures verify (witnesses run the same check as clients).
+rule Log_Accept_Normal:
+    [ In(<'rot', $D, old, new, so, sn>), !Accepted($D, old) ]
+  --[ Eq(verify(so, <'rotold', $D, old, new>, old), true),
+      Eq(verify(sn, <'rotnew', $D, old, new>, new), true),
+      AcceptNormal($D, old, new) ]->
+    [ !Accepted($D, new) ]
+
+/* ---------------- Recovery rotation ---------------- */
+
+// The owner, who may have lost IK, requests recovery to a fresh key and
+// confirms the request to each peer over the registered out-of-band channel
+// (an authentic channel, trust assumption T12).
+rule Owner_Request_Recovery:
+    [ !RecoveryKey($D, grp), Fr(~ik3) ]
+  --[ OwnerRequestsRecovery($D, pk(~ik3)), HonestIK($D, pk(~ik3)) ]->
+    [ !IK($D, ~ik3), !OOB($D, pk(~ik3)) ]
+
+rule Honest_Peer_Approve:
+    [ !Peer($D, i), !OOB($D, new) ]
+  --[ Approve($D, i, new) ]->
+    [ Approval($D, i, new) ]
+
+rule Corrupt_Peer_Approve:
+    [ !Corrupted($D, i), In(new) ]
+  --[ Approve($D, i, new) ]->
+    [ Approval($D, i, new) ]
+
+// FROST aggregation: two distinct approvals yield the threshold signature.
+rule Threshold_Sign:
+    [ Approval($D, i, new), Approval($D, j, new), !RecoveryKey($D, grp) ]
+  --[ Neq(i, j), ThresholdSigned($D, new) ]->
+    [ Out(<'recovery', $D, new, sign(<'recover', $D, new>, grp)>) ]
+
+rule Log_Accept_Recovery:
+    [ In(<'recovery', $D, new, sr>), !RecoveryKey($D, grp) ]
+  --[ Eq(verify(sr, <'recover', $D, new>, pk(grp)), true),
+      AcceptRecovery($D, new) ]->
+    [ !Accepted($D, new) ]
+
+/* ---------------- Restrictions ---------------- */
+
+restriction Equality:   "All x y #i. Eq(x, y) @ #i ==> x = y"
+restriction Inequality: "All x #i. Neq(x, x) @ #i ==> F"
+restriction OneDomain:  "All D #i #j. OnlyOnce(D) @ #i & OnlyOnce(D) @ #j ==> #i = #j"
+restriction OneRecoverySetup:
+  "All D #i #j. OnlyOnceRec(D) @ #i & OnlyOnceRec(D) @ #j ==> #i = #j"
+
+/* ---------------- Lemmas ---------------- */
+
+lemma executable_handshake:
+  exists-trace
+  "Ex C D tr k #i. Commit(C, D, tr, k) @ #i & not (Ex #r. RevIK(D) @ #r)
+                                           & not (Ex #r. RevEAK(D) @ #r)"
+
+lemma executable_normal_rotation:
+  exists-trace
+  "Ex D o n #i. AcceptNormal(D, o, n) @ #i"
+
+lemma executable_recovery:
+  exists-trace
+  "Ex D n #i. AcceptRecovery(D, n) @ #i & not (Ex D2 p #r. CorruptPeer(D2, p) @ #r)"
+
+// G1: a client that completes a handshake for D agrees with an honest server
+// of D on transcript and key, unless IK or an EAK of D was revealed before.
+lemma server_authentication:
+  "All C D tr k #i. Commit(C, D, tr, k) @ #i ==>
+      (Ex #j. Running(D, tr, k) @ #j & #j < #i)
+    | (Ex #r. RevIK(D) @ #r & #r < #i)
+    | (Ex #r. RevEAK(D) @ #r & #r < #i)"
+
+lemma server_authentication_injective:
+  "All C D tr k #i. Commit(C, D, tr, k) @ #i ==>
+      (Ex #j. Running(D, tr, k) @ #j & #j < #i
+         & not (Ex C2 #i2. Commit(C2, D, tr, k) @ #i2 & not (#i2 = #i)))
+    | (Ex #r. RevIK(D) @ #r & #r < #i)
+    | (Ex #r. RevEAK(D) @ #r & #r < #i)"
+
+// G2/G3: the session key stays secret, including after IK and every EAK of D
+// are revealed later (forward secrecy): only reveals before the handshake
+// completed matter.
+lemma session_key_secrecy_forward:
+  "All D k #i. Secret(D, k) @ #i ==>
+      not (Ex #j. K(k) @ #j)
+    | (Ex #r. RevIK(D) @ #r & #r < #i)
+    | (Ex #r. RevEAK(D) @ #r & #r < #i)"
+
+// G5: a normal rotation away from a key the owner generated is accepted only
+// if the owner performed it or that specific key was revealed. (A rotation
+// away from an adversary key installed through t corrupt recovery peers is
+// covered by recovery_authorised; an earlier formulation without the
+// HonestIK premise was falsified by exactly that trace.)
+lemma normal_rotation_authorised:
+  "All D o n #i. AcceptNormal(D, o, n) @ #i & (Ex #h. HonestIK(D, o) @ #h) ==>
+      (Ex #j. OwnerRotates(D, o, n) @ #j & #j < #i)
+    | (Ex #r. RevIKKey(D, o) @ #r & #r < #i)"
+
+// Theorem 7(a), unforgeability: no recovery signature unless two distinct
+// peers approved.
+lemma recovery_unforgeable:
+  "All D n #i. AcceptRecovery(D, n) @ #i ==>
+      Ex i1 i2 #a #b. Approve(D, i1, n) @ #a & Approve(D, i2, n) @ #b & not (i1 = i2)"
+
+// Theorem 7(b), authorisation: an accepted recovery was requested by the
+// owner, or at least t = 2 peers of D were corrupted.
+lemma recovery_authorised:
+  "All D n #i. AcceptRecovery(D, n) @ #i ==>
+      (Ex #j. OwnerRequestsRecovery(D, n) @ #j & #j < #i)
+    | (Ex i1 i2 #r1 #r2. CorruptPeer(D, i1) @ #r1 & CorruptPeer(D, i2) @ #r2 & not (i1 = i2))"
+
+// Sanity check that the model is not vacuous: with one corrupted peer and
+// a stolen IK, the adversary still cannot complete a recovery to its own key.
+lemma recovery_one_corrupt_peer_insufficient:
+  "All D n #i. AcceptRecovery(D, n) @ #i
+      & (Ex i1 #r. CorruptPeer(D, i1) @ #r)
+      & not (Ex i1 i2 #r1 #r2. CorruptPeer(D, i1) @ #r1 & CorruptPeer(D, i2) @ #r2 & not (i1 = i2))
+    ==> (Ex #j. OwnerRequestsRecovery(D, n) @ #j)"
+
+end

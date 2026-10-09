@@ -49,7 +49,8 @@ var (
 	flagOut       = flag.String("out", "results", "output directory")
 	flagN         = flag.Int("n", 10000, "measured sequential handshakes per variant")
 	flagWarmup    = flag.Int("warmup", 1000, "warm-up handshakes per variant (discarded)")
-	flagTput      = flag.Duration("tput", 10*time.Second, "duration of each throughput run")
+	flagTput      = flag.Duration("tput", 5*time.Second, "duration of each throughput window")
+	flagTputReps  = flag.Int("tput-reps", 3, "throughput windows per variant (median reported)")
 	flagConc      = flag.Int("conc", 12, "concurrent clients in throughput runs")
 	flagServerCPU = flag.Int("server-cpu", 4, "logical CPU the server process is pinned to")
 	flagClientCPU = flag.String("client-cpus", "0-3,6-19", "logical CPUs for the load generator")
@@ -136,6 +137,7 @@ func writeEnv() {
 		{"handshakes_measured", strconv.Itoa(*flagN)},
 		{"handshakes_warmup", strconv.Itoa(*flagWarmup)},
 		{"throughput_seconds", flagTput.String()},
+		{"throughput_windows", strconv.Itoa(*flagTputReps)},
 		{"throughput_concurrency", strconv.Itoa(*flagConc)},
 		{"dit_log_size", strconv.Itoa(*flagLogSize)},
 		{"witness_policy", fmt.Sprintf("%d-of-%d", sim.Quorum, sim.Witnesses)},
@@ -261,8 +263,8 @@ func runHandshakes() {
 	defer stop()
 	header := []string{"variant", "description", "client_to_server_bytes", "server_to_client_bytes", "total_bytes",
 		"client_sig_verifications", "n", "latency_p50_us", "latency_p95_us", "latency_p99_us", "latency_mean_us",
-		"client_cpu_us_per_hs", "server_cpu_us_per_hs", "server_hs_per_s_single_core", "server_cpu_utilization",
-		"throughput_hs"}
+		"client_cpu_us_per_hs", "server_cpu_us_per_hs", "server_cpu_us_per_hs_min", "server_cpu_us_per_hs_max",
+		"server_hs_per_s_single_core", "server_cpu_utilization", "throughput_hs"}
 	var rows, samples [][]string
 	for _, v := range variants(t) {
 		addr := fmt.Sprintf("127.0.0.1:%d", t.Ports[v.port])
@@ -296,39 +298,53 @@ func runHandshakes() {
 		}
 		sort.Slice(lat, func(i, j int) bool { return lat[i] < lat[j] })
 
-		// Throughput: saturate the single-core server.
-		var done atomic.Int64
-		stopAt := time.Now().Add(*flagTput)
-		srv0 := procCPU(cmd.Process.Pid)
-		t0 := time.Now()
-		var wg sync.WaitGroup
-		for g := 0; g < *flagConc; g++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for time.Now().Before(stopAt) {
-					raw, err := net.Dial("tcp", addr)
-					if err != nil {
-						continue
-					}
-					if _, err := v.dial(raw); err == nil {
-						done.Add(1)
-					}
-					raw.Close()
-				}
-			}()
+		// Throughput: saturate the single-core server, in several windows.
+		type window struct {
+			perHS time.Duration
+			rate  float64
+			util  float64
+			n     int64
 		}
-		wg.Wait()
-		elapsed := time.Since(t0)
-		srvCPU := procCPU(cmd.Process.Pid) - srv0
-		n := done.Load()
-		perHS := srvCPU / time.Duration(n)
+		var ws []window
+		for rep := 0; rep < *flagTputReps; rep++ {
+			var done atomic.Int64
+			stopAt := time.Now().Add(*flagTput)
+			srv0 := procCPU(cmd.Process.Pid)
+			t0 := time.Now()
+			var wg sync.WaitGroup
+			for g := 0; g < *flagConc; g++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					for time.Now().Before(stopAt) {
+						raw, err := net.Dial("tcp", addr)
+						if err != nil {
+							continue
+						}
+						if _, err := v.dial(raw); err == nil {
+							done.Add(1)
+						}
+						raw.Close()
+					}
+				}()
+			}
+			wg.Wait()
+			elapsed := time.Since(t0)
+			srvCPU := procCPU(cmd.Process.Pid) - srv0
+			n := done.Load()
+			ws = append(ws, window{srvCPU / time.Duration(n), float64(n) / elapsed.Seconds(),
+				srvCPU.Seconds() / elapsed.Seconds(), n})
+		}
+		sort.Slice(ws, func(i, j int) bool { return ws[i].perHS < ws[j].perHS })
+		med := ws[len(ws)/2]
 		rows = append(rows, []string{v.name, v.desc, strconv.Itoa(cc.BytesWritten), strconv.Itoa(cc.BytesRead),
 			strconv.Itoa(cc.BytesWritten + cc.BytesRead), strconv.Itoa(ver), strconv.Itoa(*flagN),
 			us(pct(lat, .50)), us(pct(lat, .95)), us(pct(lat, .99)), us(sum / time.Duration(*flagN)),
-			us(clientCPU), us(perHS), strconv.FormatFloat(float64(n)/elapsed.Seconds(), 'f', 0, 64),
-			strconv.FormatFloat(srvCPU.Seconds()/elapsed.Seconds(), 'f', 3, 64), strconv.FormatInt(n, 10)})
-		fmt.Fprintf(os.Stderr, "%-26s p50 %s us, server %s us/hs, %.0f hs/s\n", v.name, us(pct(lat, .5)), us(perHS), float64(n)/elapsed.Seconds())
+			us(clientCPU), us(med.perHS), us(ws[0].perHS), us(ws[len(ws)-1].perHS),
+			strconv.FormatFloat(med.rate, 'f', 0, 64), strconv.FormatFloat(med.util, 'f', 3, 64),
+			strconv.FormatInt(med.n, 10)})
+		fmt.Fprintf(os.Stderr, "%-26s p50 %s us, server %s us/hs [%s-%s], %.0f hs/s\n", v.name, us(pct(lat, .5)),
+			us(med.perHS), us(ws[0].perHS), us(ws[len(ws)-1].perHS), med.rate)
 	}
 	writeCSV(filepath.Join(*flagOut, "handshakes.csv"), header, rows)
 	writeCSV(filepath.Join(*flagOut, "latency_samples.csv"), []string{"variant", "i", "latency_ns"}, samples)
