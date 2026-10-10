@@ -11,10 +11,10 @@ import (
 	"net"
 	"testing"
 
-	"github.com/dit-protocol/poc/handshake"
-	"github.com/dit-protocol/poc/pqc"
-	"github.com/dit-protocol/poc/sim"
-	"github.com/dit-protocol/poc/tlog"
+	"github.com/DebasishTripathy13/dit-poc/handshake"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/sim"
+	"github.com/DebasishTripathy13/dit-poc/tlog"
 )
 
 func BenchmarkMLDSA65Sign(b *testing.B) {

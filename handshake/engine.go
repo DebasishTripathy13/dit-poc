@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 // ServerAuth supplies the server's authentication messages.

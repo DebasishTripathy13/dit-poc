@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dit-protocol/poc/handshake"
-	"github.com/dit-protocol/poc/pqc"
-	"github.com/dit-protocol/poc/rotation"
-	"github.com/dit-protocol/poc/sim"
+	"github.com/DebasishTripathy13/dit-poc/handshake"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/rotation"
+	"github.com/DebasishTripathy13/dit-poc/sim"
 )
 
 // runSizes records the encoded size of every DIT object, in TLV and JSON, as

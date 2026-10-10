@@ -40,10 +40,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dit-protocol/poc/baseline"
-	"github.com/dit-protocol/poc/handshake"
-	"github.com/dit-protocol/poc/identity"
-	"github.com/dit-protocol/poc/sim"
+	"github.com/DebasishTripathy13/dit-poc/baseline"
+	"github.com/DebasishTripathy13/dit-poc/handshake"
+	"github.com/DebasishTripathy13/dit-poc/identity"
+	"github.com/DebasishTripathy13/dit-poc/sim"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 // Baseline (c): TLS 1.3 with X25519MLKEM768 and a fully post-quantum X.509

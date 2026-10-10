@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dit-protocol/poc/handshake"
-	"github.com/dit-protocol/poc/tlog"
+	"github.com/DebasishTripathy13/dit-poc/handshake"
+	"github.com/DebasishTripathy13/dit-poc/tlog"
 )
 
 type result struct {

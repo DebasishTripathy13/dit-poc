@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 const (

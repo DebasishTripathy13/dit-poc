@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 // FIPS 204 context strings give domain separation between every IK signature.

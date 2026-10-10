@@ -1,4 +1,4 @@
-module github.com/dit-protocol/poc
+module github.com/DebasishTripathy13/dit-poc
 
 go 1.25.6
 

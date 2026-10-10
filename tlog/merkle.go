@@ -12,7 +12,7 @@ import (
 	"errors"
 	"math/bits"
 
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 // HashSize is the SHA3-384 output length.

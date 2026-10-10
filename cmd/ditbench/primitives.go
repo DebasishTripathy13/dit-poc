@@ -16,11 +16,11 @@ import (
 
 	"filippo.io/edwards25519"
 
-	"github.com/dit-protocol/poc/frost"
-	"github.com/dit-protocol/poc/identity"
-	"github.com/dit-protocol/poc/pqc"
-	"github.com/dit-protocol/poc/rotation"
-	"github.com/dit-protocol/poc/tlog"
+	"github.com/DebasishTripathy13/dit-poc/frost"
+	"github.com/DebasishTripathy13/dit-poc/identity"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/rotation"
+	"github.com/DebasishTripathy13/dit-poc/tlog"
 )
 
 type prim struct {

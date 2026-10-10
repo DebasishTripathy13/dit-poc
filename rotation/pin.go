@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/dit-protocol/poc/identity"
+	"github.com/DebasishTripathy13/dit-poc/identity"
 )
 
 // Pin-conflict resolution (Layer 4). A client that pinned identity P meets a

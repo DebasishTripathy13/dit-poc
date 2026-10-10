@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dit-protocol/poc/identity"
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/identity"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 // Default policy values written into identity objects by the PoC.

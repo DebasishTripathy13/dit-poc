@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dit-protocol/poc/pqc"
-	"github.com/dit-protocol/poc/tlog"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/tlog"
 )
 
 const dom = "bank.example"

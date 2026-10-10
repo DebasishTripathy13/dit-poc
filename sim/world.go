@@ -7,11 +7,11 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/dit-protocol/poc/handshake"
-	"github.com/dit-protocol/poc/identity"
-	"github.com/dit-protocol/poc/pqc"
-	"github.com/dit-protocol/poc/rotation"
-	"github.com/dit-protocol/poc/tlog"
+	"github.com/DebasishTripathy13/dit-poc/handshake"
+	"github.com/DebasishTripathy13/dit-poc/identity"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/rotation"
+	"github.com/DebasishTripathy13/dit-poc/tlog"
 )
 
 // Parameters of the reference deployment.

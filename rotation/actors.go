@@ -5,9 +5,9 @@ import (
 
 	"filippo.io/edwards25519"
 
-	"github.com/dit-protocol/poc/frost"
-	"github.com/dit-protocol/poc/identity"
-	"github.com/dit-protocol/poc/pqc"
+	"github.com/DebasishTripathy13/dit-poc/frost"
+	"github.com/DebasishTripathy13/dit-poc/identity"
+	"github.com/DebasishTripathy13/dit-poc/pqc"
 )
 
 // Peer is a recovery peer: an ML-DSA-65 key for sponsoring and cancelling
