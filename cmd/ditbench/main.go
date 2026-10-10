@@ -58,7 +58,11 @@ var (
 	flagLogSize   = flag.Int("log-size", 1<<20, "number of entries in the simulated DIT log")
 	flagBenchTime = flag.Duration("benchtime", time.Second, "target time per primitive microbenchmark")
 	flagServe     = flag.Bool("serve", false, "internal: run as the pinned server process")
-	flagOnly      = flag.String("only", "", "run only one stage: primitives, sizes or handshakes")
+	flagOnly      = flag.String("only", "", "run only one stage: primitives, sizes, handshakes or netem")
+	flagNetem     = flag.String("netem-rtt", "10,40,150", "round-trip times (ms) for the netem stage")
+	flagNetemLoss = flag.Float64("netem-loss", 0.1, "packet loss per direction (percent) for the netem stage")
+	flagNetemN    = flag.Int("netem-n", 1000, "handshakes per variant and RTT in the netem stage")
+	flagNetemConc = flag.Int("netem-conc", 8, "concurrent clients in the netem stage")
 )
 
 func main() {
@@ -97,6 +101,12 @@ func main() {
 	if stage("handshakes") {
 		fmt.Fprintln(os.Stderr, "== handshakes")
 		runHandshakes()
+	}
+	// The netem stage needs CAP_NET_ADMIN in a private network namespace and
+	// runs only when requested: make bench-netem (unshare -rn ... -only netem).
+	if *flagOnly == "netem" {
+		fmt.Fprintln(os.Stderr, "== netem")
+		runNetem()
 	}
 }
 
@@ -212,6 +222,11 @@ func variants(t *trust) []variant {
 			return cl.Verifies, err
 		}
 	}
+	ours := func(c net.Conn) (int, error) {
+		cl := &handshake.X509Client{Roots: pool, ServerName: sim.Domain, Now: now}
+		_, err := handshake.Client(c, sim.Domain, cl)
+		return cl.Verifies, err
+	}
 	pq := func(c net.Conn) (int, error) {
 		cl := &handshake.PQChainClient{RootPub: t.PQRoot, LogPubs: t.PQLogs}
 		_, err := handshake.Client(c, sim.Domain, cl)
@@ -220,6 +235,7 @@ func variants(t *trust) []variant {
 	return []variant{
 		{"a_tls13_classical", "a", "TLS 1.3, ECDSA P-256 chain, X25519 (crypto/tls)", tlsClient(baseline.Classical)},
 		{"b_tls13_hybrid_kem", "b", "TLS 1.3, ECDSA P-256 chain, X25519MLKEM768 (crypto/tls)", tlsClient(baseline.HybridKEM)},
+		{"bp_ours_hybrid_ecdsa", "bp", "TLS 1.3, ECDSA P-256 chain, X25519MLKEM768 (our implementation)", ours},
 		{"c_tls13_full_pq", "c", "TLS 1.3, ML-DSA-65 chain + 2 ML-DSA SCTs, X25519MLKEM768", pq},
 		{"dit_warm", "dit", "DIT, pinned identity, cached epoch credential", dit(true, true)},
 		{"dit_warm_new_epoch", "dit", "DIT, pinned identity, new epoch credential", dit(true, false)},

@@ -29,6 +29,7 @@ const (
 	suiteAES256GCMSHA384  = 0x1302
 	groupX25519MLKEM768   = 0x11EC // RFC 10024
 	sigMLDSA65            = 0x0905 // draft-ietf-tls-mldsa
+	sigECDSAP256SHA256    = 0x0403
 	extServerName         = 0x0000
 	extSupportedGroups    = 0x000a
 	extSigAlgs            = 0x000d

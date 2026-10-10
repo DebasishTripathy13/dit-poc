@@ -61,6 +61,11 @@ func serve(logSize int) error {
 	handlers := map[string]handler{
 		"a": func(c net.Conn) error { return tls.Server(c, chain.ServerConfig(baseline.Classical)).Handshake() },
 		"b": func(c net.Conn) error { return tls.Server(c, chain.ServerConfig(baseline.HybridKEM)).Handshake() },
+		"bp": func(c net.Conn) error {
+			_, err := handshake.Server(c, &handshake.X509Server{Leaf: chain.Leaf.Raw,
+				Intermediate: chain.Intermediate.Raw, Key: chain.LeafKey})
+			return err
+		},
 		"c": func(c net.Conn) error { _, err := handshake.Server(c, pq); return err },
 		"dit": func(c net.Conn) error {
 			_, err := handshake.Server(c, world.Server)

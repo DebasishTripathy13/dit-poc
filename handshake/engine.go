@@ -30,6 +30,23 @@ type ClientAuth interface {
 	VerifyCertificate(body []byte) (cvKey []byte, err error)
 }
 
+// Optional interfaces for authenticators that do not use ML-DSA-65 for
+// CertificateVerify (baseline b', an ECDSA P-256 X.509 chain). Authenticators
+// that do not implement them use ML-DSA-65.
+type schemeSigner interface{ SigScheme() uint16 }
+
+type cvVerifier interface {
+	SigScheme() uint16
+	VerifyCV(content, sig []byte) bool
+}
+
+func serverScheme(a ServerAuth) uint16 {
+	if s, ok := a.(schemeSigner); ok {
+		return s.SigScheme()
+	}
+	return sigMLDSA65
+}
+
 // Session is an established connection after the handshake.
 type Session struct {
 	rc       *recordConn
@@ -69,7 +86,11 @@ func Client(conn io.ReadWriter, serverName string, auth ClientAuth) (*Session, e
 	exts.ext(extServerName, snl.b)
 	exts.ext(extSupportedVersions, []byte{2, 0x03, 0x04})
 	exts.ext(extSupportedGroups, []byte{0, 2, groupX25519MLKEM768 >> 8, groupX25519MLKEM768 & 0xff})
-	exts.ext(extSigAlgs, []byte{0, 2, sigMLDSA65 >> 8, sigMLDSA65 & 0xff})
+	scheme := uint16(sigMLDSA65)
+	if v, ok := auth.(cvVerifier); ok {
+		scheme = v.SigScheme()
+	}
+	exts.ext(extSigAlgs, []byte{0, 2, byte(scheme >> 8), byte(scheme)})
 	ks := &builder{}
 	ks.u16(groupX25519MLKEM768)
 	ks.vec16(share)
@@ -142,11 +163,17 @@ func Client(conn io.ReadWriter, serverName string, auth ClientAuth) (*Session, e
 	}
 	cp := &parser{b: cvMsg[4:]}
 	alg, sig := cp.u16(), cp.vec16()
-	if cp.err || alg != sigMLDSA65 {
+	if cp.err || alg != scheme {
 		return nil, errDecode
 	}
 	th := transcriptHash(chMsg, shMsg, eeMsg, certMsg)
-	if !pqc.Verify(cvKey, "", certificateVerifyInput(th), sig) {
+	cvOK := false
+	if v, ok := auth.(cvVerifier); ok {
+		cvOK = v.VerifyCV(certificateVerifyInput(th), sig)
+	} else {
+		cvOK = pqc.Verify(cvKey, "", certificateVerifyInput(th), sig)
+	}
+	if !cvOK {
 		return nil, errors.New("handshake: CertificateVerify invalid")
 	}
 	typ, finMsg, err := rc.readHandshake()
@@ -245,7 +272,7 @@ func Server(conn io.ReadWriter, auth ServerAuth) (*Session, error) {
 	certMsg := handshakeMsg(typeCertificate, certBody)
 	th := transcriptHash(chMsg, shMsg, eeMsg, certMsg)
 	cv := &builder{}
-	cv.u16(sigMLDSA65)
+	cv.u16(serverScheme(auth))
 	cv.vec16(auth.SignCertificateVerify(certificateVerifyInput(th)))
 	cvMsg := handshakeMsg(typeCertificateVerify, cv.b)
 	th = transcriptHash(chMsg, shMsg, eeMsg, certMsg, cvMsg)

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DebasishTripathy13/dit-poc/baseline"
 	"github.com/DebasishTripathy13/dit-poc/handshake"
 	"github.com/DebasishTripathy13/dit-poc/tlog"
 )
@@ -219,5 +220,28 @@ func TestGracePeriod(t *testing.T) {
 	cl.Pin, cl.GracePrev, cl.GraceUntil = &next, prev, w.Now.Add(-time.Hour)
 	if _, _, err := run(t, w.Server, cl, nil); err == nil {
 		t.Fatal("credential from previous IK accepted after grace")
+	}
+}
+
+// Baseline (b'): our TLS 1.3 implementation with an ECDSA P-256 chain.
+func TestX509Baseline(t *testing.T) {
+	now := time.Unix(1_800_000_000, 0)
+	chain, err := baseline.NewChain(Domain, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := &handshake.X509Server{Leaf: chain.Leaf.Raw, Intermediate: chain.Intermediate.Raw, Key: chain.LeafKey}
+	cli := &handshake.X509Client{Roots: chain.Pool, ServerName: Domain, Now: now}
+	if _, _, err := run(t, srv, cli, nil); err != nil {
+		t.Fatal(err)
+	}
+	other, _ := baseline.NewChain(Domain, now)
+	cli2 := &handshake.X509Client{Roots: other.Pool, ServerName: Domain, Now: now}
+	if _, _, err := run(t, srv, cli2, nil); err == nil {
+		t.Fatal("chain under a foreign root accepted")
+	}
+	cli3 := &handshake.X509Client{Roots: chain.Pool, ServerName: "other.example", Now: now}
+	if _, _, err := run(t, srv, cli3, nil); err == nil {
+		t.Fatal("wrong server name accepted")
 	}
 }
