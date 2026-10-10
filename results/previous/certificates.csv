@@ -1,0 +1,7 @@
+item,bytes
+ecdsa_leaf_der,908
+ecdsa_intermediate_der,642
+pq_cert_meta,489
+pq_leaf_with_2_scts,12490
+pq_intermediate,5772
+pq_sct,3356

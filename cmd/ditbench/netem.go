@@ -102,6 +102,21 @@ func runNetem() {
 			fmt.Fprintf(os.Stderr, "rtt %5s ms  %-24s p50 %8s ms  (%.2f RTT)\n", rs, v.name, ms(p50), float64(p50)/1e6/rtt)
 		}
 	}
+	commit := "unknown"
+	if b, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output(); err == nil {
+		commit = strings.TrimSpace(string(b))
+	}
+	writeCSV(filepath.Join(*flagOut, "netem_env.csv"), []string{"key", "value"}, [][]string{
+		{"date_utc", time.Now().UTC().Format(time.RFC3339)},
+		{"git_commit", commit},
+		{"rtt_ms", *flagNetem},
+		{"loss_pct_per_direction", strconv.FormatFloat(*flagNetemLoss, 'f', 2, 64)},
+		{"handshakes_per_config", strconv.Itoa(*flagNetemN)},
+		{"concurrency", strconv.Itoa(*flagNetemConc)},
+		{"warmup", "20"},
+		{"loopback_mtu", "1500"},
+		{"setup", "single machine, unprivileged network namespace, tc netem on loopback"},
+	})
 	writeCSV(filepath.Join(*flagOut, "netem.csv"), []string{"variant", "rtt_ms", "loss_pct", "n",
 		"p50_ms", "p95_ms", "p99_ms", "mean_ms", "p50_in_rtts"}, rows)
 	writeCSV(filepath.Join(*flagOut, "netem_samples.csv"), []string{"variant", "rtt_ms", "i", "latency_ns"}, samples)
