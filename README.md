@@ -2,7 +2,9 @@
 
 Reference implementation and measurement harness for the paper *DIT: DNSSEC-Anchored Domain Identities with a Verifiable Key-Event Log for Post-Quantum Web Authentication* (Tripathy and P, revised version).
 
-Release `v1.1-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.1-paper>) is the artifact for the paper (`v1.0-paper` is an earlier state without baseline b' and the network-emulation data). It is to be archived on Zenodo; the DOI will be added here once assigned.
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23274676.svg)](https://doi.org/10.5281/zenodo.23274676)
+
+Release `v1.1-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.1-paper>) is the artifact for the paper. It is archived on Zenodo as `v1.1.1-paper` (same commit): **DOI [10.5281/zenodo.23274676](https://doi.org/10.5281/zenodo.23274676)**. (`v1.0-paper` is an earlier state without baseline b' and the network-emulation data.)
 
 ## What is implemented
 
