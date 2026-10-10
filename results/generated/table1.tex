@@ -2,8 +2,9 @@
 \toprule
 Variant & C$\to$S (B) & S$\to$C (B) & Total (B) & Sig.\ checks & Extra RTTs & PQ auth. & PQ KEX & CA certs \\
 \midrule
-(a) TLS 1.3 classical & 308 & 1{,}915 & 2{,}223 & 3 & 0 & no & no & yes \\
-(b) TLS 1.3 hybrid KEM & 1{,}492 & 3{,}003 & 4{,}495 & 3 & 0 & no & yes & yes \\
+(a) TLS 1.3 classical & 308 & 1{,}913 & 2{,}221 & 3 & 0 & no & no & yes \\
+(b) TLS 1.3 hybrid KEM & 1{,}492 & 3{,}002 & 4{,}494 & 3 & 0 & no & yes & yes \\
+(b$'$) as (b), our implementation & 1{,}428 & 2{,}942 & 4{,}370 & 3 & 0 & no & yes & yes \\
 (c) TLS 1.3 fully PQ & 1{,}428 & 22{,}914 & 24{,}342 & 5 & 1 & yes & yes & yes \\
 DIT warm & 1{,}495 & 6{,}608 & 8{,}103 & 1 & 0 & yes & yes & no \\
 DIT warm, new epoch & 1{,}495 & 11{,}927 & 13{,}422 & 2 & 0 & yes & yes & no \\

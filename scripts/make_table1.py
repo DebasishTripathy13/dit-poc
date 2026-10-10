@@ -23,6 +23,7 @@ VARIANTS = [
     # key, label, PQ auth, PQ key exchange, CA-issued certificates
     ("a_tls13_classical", "(a) TLS 1.3 classical", "no", "no", "yes"),
     ("b_tls13_hybrid_kem", "(b) TLS 1.3 hybrid KEM", "no", "yes", "yes"),
+    ("bp_ours_hybrid_ecdsa", "(b$'$) as (b), our implementation", "no", "yes", "yes"),
     ("c_tls13_full_pq", "(c) TLS 1.3 fully PQ", "yes", "yes", "yes"),
     ("dit_warm", "DIT warm", "yes", "yes", "no"),
     ("dit_warm_new_epoch", "DIT warm, new epoch", "yes", "yes", "no"),
@@ -145,6 +146,9 @@ def main():
         r = sizes[k]
         js = num(r["bytes_json"]) if int(r["bytes_json"]) else "--"
         note = r["note"].replace("_", "\\_")
+        for raw, tex in [("sigma\\_old", "$\\sigma_{\\mathsf{old}}$"), ("sigma\\_new", "$\\sigma_{\\mathsf{new}}$"),
+                         ("IK\\_new", "$\\mathsf{IK}'$"), ("q=5", "$q=5$")]:
+            note = note.replace(raw, tex)
         rows.append(f"{lab} & {num(r['bytes_tlv'])} & {js} & {note} \\\\")
     t3 = "\n".join([r"\begin{tabular}{lrrl}", r"\toprule",
                     r"Object & TLV (B) & JSON (B) & Note \\", r"\midrule", *rows,
@@ -218,9 +222,10 @@ def main():
     prev_path = os.path.join(a.results, "previous", "handshakes.csv")
     if os.path.exists(prev_path):
         prev = read(prev_path, "variant")
+        common = [k for k in main if k in prev]
         diffs = {k: abs(float(hs[k]["server_cpu_us_per_hs"]) - float(prev[k]["server_cpu_us_per_hs"]))
-                 / float(prev[k]["server_cpu_us_per_hs"]) for k in main}
-        order = lambda d: sorted(main, key=lambda k: float(d[k]["server_cpu_us_per_hs"]))
+                 / float(prev[k]["server_cpu_us_per_hs"]) for k in common}
+        order = lambda d: sorted(common, key=lambda k: float(d[k]["server_cpu_us_per_hs"]))
         m["RunToRunMaxPct"] = f"{100 * max(diffs.values()):.0f}"
         m["RunToRunOrder"] = "unchanged" if order(hs) == order(prev) else "different"
     # Tamarin results (formal/tamarin_summary.txt, committed prover output).
@@ -253,9 +258,53 @@ def main():
     m["NormalRotationEntryBytes"] = num(sz("log_entry_pending_normal") + sz("log_entry_rotation_normal"))
     m["ColdExtraOverNewEpoch"] = num(int(hs["dit_cold"]["total_bytes"]) - int(hs["dit_warm_new_epoch"]["total_bytes"]))
     m["LogSize"] = num(sizes["log_size"]["bytes_tlv"])
-    for k in ["handshakes_measured", "handshakes_warmup", "throughput_concurrency", "server_cpu",
-              "go_version", "cpu_model", "git_commit", "kernel", "throughput_seconds", "throughput_windows"]:
+    for k in ["throughput_concurrency", "server_cpu", "go_version", "cpu_model", "git_commit", "kernel"]:
         m["Env" + macro_name(k)] = env[k].replace("_", "\\_")
+    for k in ["handshakes_measured", "handshakes_warmup"]:
+        m["Env" + macro_name(k)] = num(env[k])
+    words = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
+    m["EnvThroughputWindows"] = words.get(int(env["throughput_windows"]), env["throughput_windows"])
+    m["EnvThroughputSeconds"] = env["throughput_seconds"].rstrip("s") + "\\,s"
+    # ── Network emulation (results/netem.csv, optional) ──
+    netem_path = os.path.join(a.results, "netem.csv")
+    if os.path.exists(netem_path):
+        rows_n = list(csv.DictReader(open(netem_path)))
+        nenv = {r["key"]: r["value"] for r in csv.DictReader(open(os.path.join(a.results, "netem_env.csv")))}
+        rtts = []
+        for r in rows_n:
+            if r["rtt_ms"] not in rtts:
+                rtts.append(r["rtt_ms"])
+        by = {(r["variant"], r["rtt_ms"]): r for r in rows_n}
+        lines = []
+        for key, label, *_ in VARIANTS:
+            if (key, rtts[0]) not in by:
+                continue
+            cells = []
+            for rt in rtts:
+                r = by[(key, rt)]
+                cells.append(f"{float(r['p50_ms']):.1f} & {float(r['p99_ms']):.1f} & {float(r['p50_in_rtts']):.2f}")
+            lines.append(label + " & " + " & ".join(cells) + r" \\")
+        head1 = " & " + " & ".join(f"\\multicolumn{{3}}{{c}}{{RTT {rt}\\,ms}}" for rt in rtts) + r" \\"
+        cm = "".join(f"\\cmidrule(lr){{{2 + 3 * i}-{4 + 3 * i}}}" for i in range(len(rtts)))
+        head2 = "Configuration" + " & P50 & P99 & P50/RTT" * len(rtts) + r" \\"
+        tn = "\n".join([r"\begin{tabular}{l" + "rrr" * len(rtts) + "}", r"\toprule", head1, cm, head2,
+                        r"\midrule", *lines, r"\bottomrule", r"\end{tabular}"])
+        open(os.path.join(a.out, "table_netem.tex"), "w").write(tn + "\n")
+        for (key, rt), r in by.items():
+            n = macro_name(key) + "Rtt" + macro_name(rt)
+            m["Netem" + n] = f"{float(r['p50_ms']):.0f}"
+            m["Netem" + n + "InRtts"] = f"{float(r['p50_in_rtts']):.1f}"
+        m["NetemLossPct"] = f"{float(nenv['loss_pct_per_direction']):g}"
+        m["NetemN"] = num(nenv["handshakes_per_config"])
+        m["NetemConc"] = nenv["concurrency"]
+        m["NetemRttList"] = ", ".join(rtts[:-1]) + " and " + rtts[-1] if len(rtts) > 1 else rtts[0]
+        m["NetemRttMax"] = rtts[-1]
+        m["NetemRttMid"] = rtts[len(rtts) // 2]
+        m["NetemGitCommit"] = nenv["git_commit"]
+    t_ = lambda k: int(hs[k]["total_bytes"])
+    m["CPURatioDITWarmOverOurs"] = f"{s('dit_warm') / s('bp_ours_hybrid_ecdsa'):.1f}"
+    m["CPURatioOursOverStdlib"] = f"{s('bp_ours_hybrid_ecdsa') / s('b_tls13_hybrid_kem'):.2f}"
+    m["CPUDiffDITWarmOverOurs"] = f"{s('dit_warm') - s('bp_ours_hybrid_ecdsa'):.0f}"
     with open(os.path.join(a.out, "numbers.tex"), "w") as f:
         f.write("% Generated by scripts/make_table1.py from results/*.csv. Do not edit.\n")
         for k in sorted(m):

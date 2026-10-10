@@ -11,13 +11,13 @@ DNS commitment (SHA3-384) & 48 & -- & SHA3-384 of identity object \\
 Identity object & 2{,}391 & 3{,}320 & 5 recovery peers \\
 Epoch credential & 5{,}315 & 7{,}126 &  \\
 Log entry (KEY\_PUBLICATION) & 5{,}759 & -- & includes identity object and IK signature \\
-Log entry (ROTATION\_PENDING, normal) & 3{,}416 & -- & sigma\_old \\
-Log entry (KEY\_ROTATION, normal) & 9{,}116 & -- & new identity + sigma\_old + sigma\_new \\
-Log entry (ROTATION\_PENDING, recovery) & 11{,}068 & -- & new identity + IK\_new and sponsor signatures \\
+Log entry (ROTATION\_PENDING, normal) & 3{,}416 & -- & $\sigma_{\mathsf{old}}$ \\
+Log entry (KEY\_ROTATION, normal) & 9{,}116 & -- & new identity + $\sigma_{\mathsf{old}}$ + $\sigma_{\mathsf{new}}$ \\
+Log entry (ROTATION\_PENDING, recovery) & 11{,}068 & -- & new identity + $\mathsf{IK}'$ and sponsor signatures \\
 Log entry (KEY\_ROTATION, recovery) & 2{,}562 & -- & new identity + FROST signature \\
 Log entry (CANCEL, recovery) & 5{,}368 & -- & peer key + peer signature \\
 Inclusion proof & 960 & -- & depth 20, 48 B per level \\
-Cosigned STH ($q=5$) & 19{,}984 & -- & log signature + q=5 cosignatures \\
+Cosigned STH ($q=5$) & 19{,}984 & -- & log signature + $q=5$ cosignatures \\
 DIT extension, new epoch & 5{,}319 & 7{,}142 & credential only \\
 DIT extension, first contact & 32{,}042 & 43{,}249 & credential + entry + proof + cosigned STH \\
 \bottomrule

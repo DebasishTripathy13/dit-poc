@@ -2,7 +2,7 @@
 
 Reference implementation and measurement harness for the paper *DIT: DNSSEC-Anchored Domain Identities with a Verifiable Key-Event Log for Post-Quantum Web Authentication* (Tripathy and P, revised version).
 
-Release `v1.0-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.0-paper>) is the artifact for the paper. It is to be archived on Zenodo; the DOI will be added here once assigned.
+Release `v1.1-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.1-paper>) is the artifact for the paper (`v1.0-paper` is an earlier state without baseline b' and the network-emulation data). It is to be archived on Zenodo; the DOI will be added here once assigned.
 
 ## What is implemented
 
@@ -14,7 +14,7 @@ Release `v1.0-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.0-p
 | `rotation/` | Key-event log entries and the deterministic state machine run by witnesses and clients: normal rotation (waiting period, σ_old/σ_new, recovery configuration immutable), recovery rotation (peer-sponsored requests, waiting period, k-of-n signed cancels, FROST σ_rot), precedence of recovery over normal rotation, EAK revocation, pin-conflict resolution. |
 | `frost/` | FROST(Ed25519, SHA-512) per RFC 9591, trusted-dealer key generation. Aggregate signatures verify with `crypto/ed25519`. |
 | `handshake/` | DIT over TLS 1.3 (paper, design Option A): X25519MLKEM768 key share, TLS 1.3 key schedule (SHA-384), EAK as RFC 7250 raw public key, ML-DSA-65 CertificateVerify, DIT extension inside the encrypted Certificate message. Also baseline (c): a fully post-quantum X.509 chain on the same implementation. |
-| `baseline/` | Baselines (a) and (b) on Go `crypto/tls`: ECDSA P-256 chain with X25519 or X25519MLKEM768. |
+| `baseline/` | Baselines (a) and (b) on Go `crypto/tls`: ECDSA P-256 chain with X25519 or X25519MLKEM768. Baseline (b') is the same configuration as (b) on our own TLS implementation (`handshake/x509chain.go`). |
 | `sim/` | In-memory deployment (log, 7 witnesses, a published domain) used by tests and benchmarks; end-to-end handshake tests. |
 | `cmd/ditbench/` | Produces every number in the paper (see below). |
 | `bench/` | `go test` benchmarks for quick regression checks. |
@@ -35,7 +35,8 @@ Requirements: Go 1.25.6, Python ≥ 3.10 with matplotlib (`pip install matplotli
 | Baseline (c) certificate sizes (Appendix B) | `results/certificates.csv` | `make figures` → macros in `numbers.tex` |
 | Table C1 (primitive microbenchmarks) | `results/primitives.csv` | `make figures` → `results/generated/table_prims.tex` |
 | Every number quoted in the text | all of the above | `make figures` → `results/generated/numbers.tex` |
-| Re-measure everything (≈ 15 min) | — | `make bench && make figures` |
+| Table 6 and Figure 8C (network emulation) | `results/netem.csv`, `results/netem_env.csv` | `make figures` → `results/generated/table_netem.tex`, `fig8.pdf` |
+| Re-measure everything (≈ 35 min) | — | `make bench && make bench-netem && make figures` |
 | Symbolic analysis (Table 5) | `formal/dit.spthy` | `make formal` |
 | Unit and scenario tests | — | `make test` |
 
@@ -43,7 +44,7 @@ Requirements: Go 1.25.6, Python ≥ 3.10 with matplotlib (`pip install matplotli
 
 ### Measurement setup
 
-The server runs as a separate process pinned to one logical CPU (`-server-cpu`, default 4) with `GOMAXPROCS=1`. The load generator runs on the remaining CPUs (`-client-cpus`). Traffic goes over TCP on the loopback interface. **No network latency or packet loss is emulated**, so latencies are computation plus loopback cost. Extra round trips caused by large server flights are computed separately from the measured byte counts (initial congestion window of 10 segments, paper Appendix B). Each variant gets one handshake to count bytes, 1,000 warm-up handshakes, 10,000 measured sequential handshakes (latency percentiles and client CPU), and three 5-second windows with 12 concurrent clients that saturate the single-core server (server CPU per handshake from `/proc/<pid>/stat`; median reported, minimum and maximum kept in the CSV).
+The server runs as a separate process pinned to one logical CPU (`-server-cpu`, default 4) with `GOMAXPROCS=1`. The load generator runs on the remaining CPUs (`-client-cpus`). Traffic goes over TCP on the loopback interface without emulated delay or loss, so these latencies are computation plus loopback cost. `make bench-netem` measures handshake completion times under network emulation: it runs in an unprivileged user and network namespace (`unshare -rn`, no root needed), sets the loopback MTU to 1500 bytes and applies `tc netem` with half the RTT as one-way delay and 0.1% loss per direction, at RTTs of 10, 40 and 150 ms (1,000 handshakes per configuration and RTT, 8 concurrent). Client and server share one machine. Each variant gets one handshake to count bytes, 1,000 warm-up handshakes, 10,000 measured sequential handshakes (latency percentiles and client CPU), and three 5-second windows with 12 concurrent clients that saturate the single-core server (server CPU per handshake from `/proc/<pid>/stat`; median reported, minimum and maximum kept in the CSV).
 
 ## Tests
 

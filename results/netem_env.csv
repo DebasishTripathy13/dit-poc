@@ -1,0 +1,10 @@
+key,value
+date_utc,2026-10-10T04:55:48Z
+git_commit,9e1224d
+rtt_ms,"10,40,150"
+loss_pct_per_direction,0.10
+handshakes_per_config,1000
+concurrency,8
+warmup,20
+loopback_mtu,1500
+setup,"single machine, unprivileged network namespace, tc netem on loopback"

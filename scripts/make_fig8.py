@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 VARIANTS = [
     ("a_tls13_classical", "(a) classical"),
     ("b_tls13_hybrid_kem", "(b) hybrid KEM"),
+    ("bp_ours_hybrid_ecdsa", "(b') hybrid, ours"),
     ("c_tls13_full_pq", "(c) fully PQ"),
     ("dit_warm", "DIT warm"),
     ("dit_warm_new_epoch", "DIT new epoch"),
@@ -44,7 +45,15 @@ def main():
     hi = [float(hs[k]["server_cpu_us_per_hs_max"]) - c for c, (k, _) in zip(cpu, VARIANTS)]
 
     plt.rcParams.update({"font.size": 8, "font.family": "serif"})
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.6))
+    netem_path = os.path.join(a.results, "netem.csv")
+    has_netem = os.path.exists(netem_path)
+    if has_netem:
+        fig = plt.figure(figsize=(7.0, 4.8))
+        gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 1.0])
+        ax1, ax2 = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
+        ax3 = fig.add_subplot(gs[1, :])
+    else:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.6))
     y = range(len(labels))
     ax1.barh(y, up, color=UP, label="client $\\to$ server")
     ax1.barh(y, down, left=up, color=DOWN, label="server $\\to$ client")
@@ -66,6 +75,32 @@ def main():
     ax2.set_xlim(0, max(cpu) * 1.18)
     ax2.spines[["top", "right"]].set_visible(False)
 
+    ax1.set_title("(A) bytes per handshake", loc="left", fontsize=8)
+    ax2.set_title("(B) server CPU", loc="left", fontsize=8)
+    if has_netem:
+        with open(netem_path, newline="") as f:
+            rows = list(csv.DictReader(f))
+        lines = [("a_tls13_classical", "(a) classical", "-", "o"), ("b_tls13_hybrid_kem", "(b) hybrid KEM", "-", "s"),
+                 ("c_tls13_full_pq", "(c) fully PQ", "--", "^"), ("dit_warm", "DIT warm", "-", "D"),
+                 ("dit_cold", "DIT cold", "--", "v")]
+        rtts = sorted({float(r["rtt_ms"]) for r in rows})
+        xs = list(range(len(rtts)))
+        off = {k: (i - (len(lines) - 1) / 2) * 0.035 for i, (k, *_) in enumerate(lines)}
+        for key, lab, ls, mk in lines:
+            ys = [float(next(r for r in rows if r["variant"] == key and float(r["rtt_ms"]) == rt)["p50_in_rtts"])
+                  for rt in rtts]
+            ax3.plot([x + off[key] for x in xs], ys, ls, marker=mk, ms=4, lw=1.1, label=lab)
+        for level in (2, 3):
+            ax3.axhline(level, color="0.6", lw=0.6, ls=":", zorder=0)
+        ax3.set_xticks(xs, [f"{r:g} ms" for r in rtts])
+        ax3.set_xlim(-0.4, len(rtts) - 0.6)
+        ax3.set_ylim(1.5, 4.0)
+        ax3.set_yticks([2, 2.5, 3, 3.5])
+        ax3.set_xlabel("Round-trip time (with packet loss as in Methods)")
+        ax3.set_ylabel("Median handshake time / RTT")
+        ax3.legend(frameon=False, ncol=5, loc="upper center", bbox_to_anchor=(0.5, 1.0))
+        ax3.set_title("(C) TCP connect + TLS handshake under network emulation, in round trips", loc="left", fontsize=8)
+        ax3.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     for ext in ("pdf", "png"):
         meta = {"CreationDate": None} if ext == "pdf" else {"Software": None}
