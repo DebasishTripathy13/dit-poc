@@ -2,9 +2,9 @@
 
 Reference implementation and measurement harness for the paper *Domain identities anchored in DNS and a witnessed key-event log enable post-quantum web server authentication without certificate authorities* (Tripathy and P; the protocol is called DIT).
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23274676.svg)](https://doi.org/10.5281/zenodo.23274676)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23275009.svg)](https://doi.org/10.5281/zenodo.23275009)
 
-Release `v1.2-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.2-paper>) is the artifact for the paper; it is archived on Zenodo (all versions: DOI [10.5281/zenodo.23274676](https://doi.org/10.5281/zenodo.23274676) for `v1.1.1-paper`, and the `v1.2-paper` version listed on the same record). `v1.2-paper` differs from `v1.1-paper` only in the typography of Figure 5 and this README; the code and the measurement data are unchanged. (`v1.0-paper` is an earlier state without baseline b' and the network-emulation data.)
+Release `v1.2-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.2-paper>) is the artifact for the paper, archived on Zenodo with **DOI [10.5281/zenodo.23275009](https://doi.org/10.5281/zenodo.23275009)**. Earlier releases: `v1.1-paper` / `v1.1.1-paper` (same code and data, older figure typography) and `v1.0-paper` (without baseline b' and the network-emulation data).
 
 ## What is implemented
 
