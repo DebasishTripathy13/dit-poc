@@ -1,10 +1,10 @@
 # DIT proof of concept
 
-Reference implementation and measurement harness for the paper *DIT: DNSSEC-Anchored Domain Identities with a Verifiable Key-Event Log for Post-Quantum Web Authentication* (Tripathy and P, revised version).
+Reference implementation and measurement harness for the paper *Domain identities anchored in DNS and a witnessed key-event log enable post-quantum web server authentication without certificate authorities* (Tripathy and P; the protocol is called DIT).
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23274676.svg)](https://doi.org/10.5281/zenodo.23274676)
 
-Release `v1.1-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.1-paper>) is the artifact for the paper. It is archived on Zenodo as `v1.1.1-paper` (same commit): **DOI [10.5281/zenodo.23274676](https://doi.org/10.5281/zenodo.23274676)**. (`v1.0-paper` is an earlier state without baseline b' and the network-emulation data.)
+Release `v1.2-paper` (<https://github.com/DebasishTripathy13/dit-poc/tree/v1.2-paper>) is the artifact for the paper; it is archived on Zenodo (all versions: DOI [10.5281/zenodo.23274676](https://doi.org/10.5281/zenodo.23274676) for `v1.1.1-paper`, and the `v1.2-paper` version listed on the same record). `v1.2-paper` differs from `v1.1-paper` only in the typography of Figure 5 and this README; the code and the measurement data are unchanged. (`v1.0-paper` is an earlier state without baseline b' and the network-emulation data.)
 
 ## What is implemented
 
@@ -30,16 +30,16 @@ Requirements: Go 1.25.6, Python ≥ 3.10 with matplotlib (`pip install matplotli
 
 | Paper item | Source data | Command |
 |---|---|---|
-| Table 1 (bytes, signature checks, properties) | `results/handshakes.csv` | `make figures` → `results/generated/table1.tex` |
-| Table 2 (latency, client/server CPU, single-core handshakes/s) | `results/handshakes.csv` | `make figures` → `results/generated/table_cpu.tex` |
-| Figure 8 | `results/handshakes.csv` | `make figures` → `results/generated/fig8.pdf` |
-| Table B1 (object sizes, TLV vs JSON) | `results/sizes.csv` | `make figures` → `results/generated/table_sizes.tex` |
-| Baseline (c) certificate sizes (Appendix B) | `results/certificates.csv` | `make figures` → macros in `numbers.tex` |
-| Table C1 (primitive microbenchmarks) | `results/primitives.csv` | `make figures` → `results/generated/table_prims.tex` |
+| Table 3 (bytes, signature checks, properties) | `results/handshakes.csv` | `make figures` → `results/generated/table1.tex` |
+| Supplementary Table S3 (latency, client/server CPU, single-core handshakes/s) | `results/handshakes.csv` | `make figures` → `results/generated/table_cpu.tex` |
+| Figure 5 | `results/handshakes.csv`, `results/netem.csv` | `make figures` → `results/generated/fig8.pdf` |
+| Supplementary Table S6 (object sizes, TLV vs JSON) | `results/sizes.csv` | `make figures` → `results/generated/table_sizes.tex` |
+| Baseline (c) certificate sizes (Supplementary Note *Byte counts and round trips*) | `results/certificates.csv` | `make figures` → macros in `numbers.tex` |
+| Supplementary Table S7 (primitive microbenchmarks) | `results/primitives.csv` | `make figures` → `results/generated/table_prims.tex` |
 | Every number quoted in the text | all of the above | `make figures` → `results/generated/numbers.tex` |
-| Table 6 and Figure 8C (network emulation) | `results/netem.csv`, `results/netem_env.csv` | `make figures` → `results/generated/table_netem.tex`, `fig8.pdf` |
+| Supplementary Table S4 and Figure 5c (network emulation) | `results/netem.csv`, `results/netem_env.csv` | `make figures` → `results/generated/table_netem.tex`, `fig8.pdf` |
 | Re-measure everything (≈ 35 min) | — | `make bench && make bench-netem && make figures` |
-| Symbolic analysis (Table 5) | `formal/dit.spthy` | `make formal` |
+| Symbolic analysis (Supplementary Table S2) | `formal/dit.spthy` | `make formal` |
 | Unit and scenario tests | — | `make test` |
 
 `make figures` is deterministic: a fresh clone regenerates the committed tables and number macros (`results/generated/*.tex`) byte for byte from the committed CSVs, and CI checks this. `fig8.pdf` is regenerated from the same CSV; its bytes can differ across matplotlib and font versions (the committed file was made with matplotlib 3.11.2), but its content does not. `results/previous/` holds an earlier complete run on the same machine, used in the paper to report run-to-run variation. `make bench` re-measures. Absolute timings depend on the machine; `results/env.csv` records the machine, Go version, commit and parameters of the committed run.

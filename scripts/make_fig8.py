@@ -44,7 +44,9 @@ def main():
     lo = [c - float(hs[k]["server_cpu_us_per_hs_min"]) for c, (k, _) in zip(cpu, VARIANTS)]
     hi = [float(hs[k]["server_cpu_us_per_hs_max"]) - c for c, (k, _) in zip(cpu, VARIANTS)]
 
-    plt.rcParams.update({"font.size": 8, "font.family": "serif"})
+    plt.rcParams.update({"font.size": 8, "font.family": "sans-serif",
+                         "font.sans-serif": ["Helvetica", "Arial", "Liberation Sans", "DejaVu Sans"],
+                         "mathtext.fontset": "dejavusans"})
     netem_path = os.path.join(a.results, "netem.csv")
     has_netem = os.path.exists(netem_path)
     if has_netem:
@@ -61,7 +63,7 @@ def main():
         ax1.text(u + d + 0.4, i, f"{u + d:.1f}", va="center")
     ax1.set_yticks(list(y), labels)
     ax1.invert_yaxis()
-    ax1.set_xlabel("Handshake bytes (kB)")
+    ax1.set_xlabel("Handshake size (kB)")
     ax1.set_xlim(0, max(u + d for u, d in zip(up, down)) * 1.15)
     ax1.legend(frameon=False, loc="upper right")
     ax1.spines[["top", "right"]].set_visible(False)
@@ -75,11 +77,13 @@ def main():
     ax2.set_xlim(0, max(cpu) * 1.18)
     ax2.spines[["top", "right"]].set_visible(False)
 
-    ax1.set_title("(A) bytes per handshake", loc="left", fontsize=8)
-    ax2.set_title("(B) server CPU", loc="left", fontsize=8)
+    ax1.set_title("a", loc="left", fontsize=10, fontweight="bold")
+    ax2.set_title("b", loc="left", fontsize=10, fontweight="bold")
     if has_netem:
         with open(netem_path, newline="") as f:
             rows = list(csv.DictReader(f))
+        with open(os.path.join(a.results, "netem_env.csv"), newline="") as f:
+            loss = {r["key"]: r["value"] for r in csv.DictReader(f)}["loss_pct_per_direction"]
         lines = [("a_tls13_classical", "(a) classical", "-", "o"), ("b_tls13_hybrid_kem", "(b) hybrid KEM", "-", "s"),
                  ("c_tls13_full_pq", "(c) fully PQ", "--", "^"), ("dit_warm", "DIT warm", "-", "D"),
                  ("dit_cold", "DIT cold", "--", "v")]
@@ -96,10 +100,10 @@ def main():
         ax3.set_xlim(-0.4, len(rtts) - 0.6)
         ax3.set_ylim(1.5, 4.0)
         ax3.set_yticks([2, 2.5, 3, 3.5])
-        ax3.set_xlabel("Round-trip time (with packet loss as in Methods)")
-        ax3.set_ylabel("Median handshake time / RTT")
+        ax3.set_xlabel(f"Round-trip time (emulated, {float(loss):g}% loss per direction)")
+        ax3.set_ylabel("Median handshake time (RTTs)")
         ax3.legend(frameon=False, ncol=5, loc="upper center", bbox_to_anchor=(0.5, 1.0))
-        ax3.set_title("(C) TCP connect + TLS handshake under network emulation, in round trips", loc="left", fontsize=8)
+        ax3.set_title("c", loc="left", fontsize=10, fontweight="bold")
         ax3.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     for ext in ("pdf", "png"):
